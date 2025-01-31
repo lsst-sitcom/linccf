@@ -9,16 +9,22 @@ class RubinParquetReader(ParquetReader):
 
     def read(self, input_file, read_columns=None):
         """Reader for the specifics of Rubin parquet files."""
+        self.regular_file_exists(input_file, **self.kwargs)
+        
         if read_columns is not None:
             # Mapping stage, so we only need ra, dec set in read_columns
-            kwargs = {"columns": read_columns}
-            table = pq.read_table(input_file, **kwargs).to_pandas()
+            parquet_file = pq.ParquetFile(input_file)
+            for smaller_table in parquet_file.iter_batches(
+                batch_size=self.chunksize, columns=read_columns, use_pandas_metadata=True
+            ):
+                yield smaller_table.to_pandas()
         else:
             # Other stages need all pre-selected columns
-            kwargs = {"columns": self.column_names} if self.column_names else {}
-            table = pq.read_table(input_file, **kwargs).to_pandas()
-            table = self.process_rubin_table(table)
-        yield table
+            parquet_file = pq.ParquetFile(input_file)
+            for smaller_table in parquet_file.iter_batches(
+                batch_size=self.chunksize, columns=self.column_names, use_pandas_metadata=True
+            ):
+                yield self.process_rubin_table(smaller_table.to_pandas())
         
     def process_rubin_table(self, table):
         dataset_type = self.kwargs["dataset_type"]
