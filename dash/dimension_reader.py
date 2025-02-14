@@ -1,8 +1,6 @@
 from hats_import.catalog.file_readers import ParquetReader
 import pyarrow.parquet as pq
 import pyarrow as pa
-import re
-import glob
 import pandas as pd
 import numpy as np
 
@@ -23,14 +21,19 @@ class DimensionParquetReader(ParquetReader):
 
         batch_size = 0
         batch_tables = []
+
         for _, row in batch_files.iterrows():
-            # print("row", row)
             parquet_file = pq.ParquetFile(row["path"], **self.kwargs)
             for smaller_table in parquet_file.iter_batches(
                 batch_size=self.chunksize, columns=columns
             ):
                 table = pa.Table.from_batches([smaller_table])
+                
+                # TODO: Implement this filtering with more flexility
+                # table = table.filter(pa.compute.is_valid(table['coord_ra']))
+                
                 table = table.replace_schema_metadata()
+
                 if read_columns is None:
                     ## splitting stage - add in dimension columns
                     for column in added_columns:
@@ -44,7 +47,7 @@ class DimensionParquetReader(ParquetReader):
                         yield table
                         batch_size = 0
                     else:
-                        pa.concat_tables(batch_tables)
+                        yield pa.concat_tables(batch_tables)
                         batch_tables = []
                         batch_tables.append(table)
                         batch_size = len(table)
