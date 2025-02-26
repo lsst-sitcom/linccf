@@ -49,7 +49,8 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
     cutout, cutout_box = get_cutout(butler, data_id, ra, dec, size=size)
     cutout_box_min_corner = cutout_box.getCorners()[0]
 
-    ap10_flux = get_cutout(butler, data_id, ra, dec, size=10)[0].getImage().getArray().sum()
+    cutout10_array = get_cutout(butler, data_id, ra, dec, size=10)[0].getImage().getArray()
+    ap10_flux = cutout10_array.sum()
 
     astropy_wcs = WCS(cutout.wcs.getFitsMetadata())
     astropy_wcs.wcs.crpix[0] -= cutout_box_min_corner.x
@@ -68,7 +69,7 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
         astropy_wcs = reproject_wcs
     
     interval = ZScaleInterval()
-    _vmin, vmax = interval.get_limits(image_array)
+    _vmin, vmax = interval.get_limits(cutout10_array)
 
     plt.figure(figsize=(8, 8), dpi=200)
     plt.subplot(projection=astropy_wcs)
@@ -103,7 +104,7 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
 
 
 @lru_cache(maxsize=1024)
-def load_object_and_forced(oid, hats_path):
+def load_object_and_forced(oid, hats_path, filter=True):
     filters = [("objectId", "==", oid)]
 
     comcam_obj = hats_path / "object"
@@ -123,19 +124,20 @@ def load_object_and_forced(oid, hats_path):
     )
 
     ndf = src_nested.compute()
-    ndf = ndf.query(
-        "~lc.psfFlux_flag"
-        " and ~lc.pixelFlags_suspect"
-        " and ~lc.pixelFlags_saturated"
-        " and ~lc.pixelFlags_cr"
-        " and ~lc.pixelFlags_bad"
-    )
+    if filter:
+        ndf = ndf.query(
+            "~lc.psfFlux_flag"
+            " and ~lc.pixelFlags_suspect"
+            " and ~lc.pixelFlags_saturated"
+            " and ~lc.pixelFlags_cr"
+            " and ~lc.pixelFlags_bad"
+        )
     return ndf.iloc[0]
 
 
 def make_figure(oid, butler, hats_path, image_size=100):
     data = load_object_and_forced(oid, hats_path)
-    lc = data.lc.sort_values("midpointMJDTai").reset_index()
+    lc = data.lc.sort_values("midpointMjdTai").reset_index()
 
     wcs = create_wcs(data.coord_ra, data.coord_dec, size=image_size)
 
@@ -170,7 +172,7 @@ def make_figure(oid, butler, hats_path, image_size=100):
     range_y = [y_max + 0.1 * y_ampl, y_min - 0.1 * y_ampl]
     colors = lc["band"].map(BAND_COLORS)
     scatter_trace = go.Scatter(
-        x=lc["midpointMJDTai"],
+        x=lc["midpointMjdTai"],
         y=lc["psfMag"],
         error_y=dict(type="data", array=lc["psfMagErr"], visible=True),
         mode="markers",
@@ -180,7 +182,7 @@ def make_figure(oid, butler, hats_path, image_size=100):
     lc_fig = go.FigureWidget(data=[scatter_trace])
     lc_fig.update_layout(
         title=f"{data.objectId}",
-        xaxis_title="midpointMJDTai",
+        xaxis_title="midpointMjdTai",
         yaxis_title="psfMag",
         yaxis=dict(range=range_y),
         width=800,
