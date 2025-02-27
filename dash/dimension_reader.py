@@ -1,8 +1,10 @@
 from hats_import.catalog.file_readers import ParquetReader
-import pyarrow.parquet as pq
-import pyarrow as pa
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.parquet as pq
 
 
 class DimensionParquetReader(ParquetReader):
@@ -28,11 +30,10 @@ class DimensionParquetReader(ParquetReader):
                 batch_size=self.chunksize, columns=columns
             ):
                 table = pa.Table.from_batches([smaller_table])
-                
-                # TODO: Implement this filtering with more flexility
-                # table = table.filter(pa.compute.is_valid(table['coord_ra']))
-                
                 table = table.replace_schema_metadata()
+
+                # Filter rows with undefined coordinates
+                table = _filter_rows_with_undefined_coordinates(table)
 
                 if read_columns is None:
                     ## splitting stage - add in dimension columns
@@ -57,3 +58,35 @@ class DimensionParquetReader(ParquetReader):
 
         if len(batch_tables) > 0:
             yield pa.concat_tables(batch_tables)
+
+
+def _filter_rows_with_undefined_coordinates(table):
+    """Filter rows with invalid/undefined coordinates.
+    
+    We know that:
+    - DIA object, DIA source and source have "ra"/"dec" columns
+    - DIA forced source, object and forced source have "coord_ra"/"coord_dec" columns
+    """
+    coordinates = None
+
+    coordinates_1 = ["ra", "dec"]
+    coordinates_2 = ["coord_ra", "coord_dec"]
+    
+    if all(col in table.column_names for col in coordinates_1):
+        coordinates = coordinates_1
+    elif all(col in table.column_names for col in coordinates_2):
+        coordinates = coordinates_2
+    
+    if coordinates is None:
+        raise ValueError("ra/dec columns not found")
+
+    ra_values = table[coordinates[0]]
+    dec_values = table[coordinates[1]]
+
+    # Filter rows where either ra/dec coordinate is null
+    invalid_ra_mask = pc.is_null(ra_values, nan_is_null=True)
+    invalid_dec_mask = pc.is_null(dec_values, nan_is_null=True)
+    mask = pc.or_(invalid_ra_mask, invalid_dec_mask)
+    filtered_table = table.filter(pc.invert(mask))
+    
+    return filtered_table
