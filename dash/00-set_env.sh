@@ -1,3 +1,3 @@
 #!/bin/bash
-export DRP_VERSION="w_2025_07"
-export COLLECTION_TAG="DM-48940"
+export DRP_VERSION="w_2025_08"
+export COLLECTION_TAG="DM-49029"
