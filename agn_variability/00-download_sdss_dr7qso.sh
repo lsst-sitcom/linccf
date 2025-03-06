@@ -1,12 +1,14 @@
 #!/bin/bash
 
+# Note that we actually can skip downloading the standard sdss dr7 quasar catalog
+# (at http://das.sdss.org/va/qsocat/dr7qso.fit.gz), as the "Additional Properties" catalog contains 
+# all the data we'll need.
+
 # Directory to save the file
 output_dir="/data3/epyc/data3/hats/raw/sdss_dr7sqo_props"
 
-# Note that we actually can skip downloading the standard sdss dr7 quasar catalog
-# As the additional properties catalog contains all the data we need
+# SDSS DR7 QSO (Additional Properties)
 urls=(
-#    "http://das.sdss.org/va/qsocat/dr7qso.fit.gz"
     "https://das.sdss.org/va/qso_properties_dr7/data/catalogs/dr7_bh_June_2010.fits.gz"
 )
 
