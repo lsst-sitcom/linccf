@@ -1,5 +1,4 @@
-<img src="https://github.com/astronomy-commons/lsdb/blob/main/docs/lincc-logo.png?raw=true" width="280" height="100"> 
-<img src="https://gist.github.com/user-attachments/assets/f21c6a55-d1e9-47d7-8994-98c513048b6e">
+<img src="https://cdn2.webdamdb.com/1280_2yYofV7cPVE1.png?1607019137" height="200"> [![LINCC Frameworks](https://github.com/astronomy-commons/lsdb/blob/main/docs/lincc-logo.png)](https://lsstdiscoveryalliance.org/programs/lincc-frameworks/)
 
 # LINCC Frameworks Rubin commissioning 
 
