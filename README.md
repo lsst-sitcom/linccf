@@ -1,9 +1,10 @@
-<img src="https://github.com/astronomy-commons/lsdb/blob/main/docs/lincc-logo.png?raw=true" width="300" height="100">
+<img src="https://github.com/astronomy-commons/lsdb/blob/main/docs/lincc-logo.png?raw=true" width="280" height="100"> 
+<img src="https://gist.github.com/user-attachments/assets/f21c6a55-d1e9-47d7-8994-98c513048b6e">
 
-# LINCC Frameworks commissioning 
+# LINCC Frameworks Rubin commissioning 
 
 Notebooks and scripts written by or used by LINCC Frameworks during 
-commissiong on LSST.
+commissiong on Rubin ComCam data.
 
 This is predominantly in service of providing HATS catalogs for Rubin data,
 and showcasing science workflows using LSDB on those catalogs.
