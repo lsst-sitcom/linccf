@@ -19,10 +19,15 @@ There are two primary output tables:
         lists under each object row. Sources within an object are sorted by detection time.
     
 * `object_lc`
-    * Combines data from three Butler tables: `objectTable`,
-      `sourceTable`, `forcedSourceTable`
-    * "Nests" the forcedSourceTable and sourceTable tables as structured
-        lists under each object row. Sources within an object are sorted by detection time.
+    * Combines data from two Butler tables: `objectTable`, `forcedSourceTable`
+    * "Nests" the forcedSourceTable table as structured lists under each object row. Sources
+      within an object are sorted by detection time.
+
+* `source`
+    * Contains data from the Butler table: `sourceTable`
+    * It is a flat table with the sources detected in science imaging. It is an independent
+      table because there is no association between objects of the `objectTable` and the
+      existing sources.
 
 ## Butler post-processing
 
