@@ -10,7 +10,7 @@ This is not a simple copy of the files, however, as we add value along the way.
 
 ## Nested output
 
-There are two primary output tables:
+There are three primary output tables:
 
 * `diaObject_lc`
     * Combines data from three Butler tables: `diaObjectTable_tract`,
