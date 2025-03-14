@@ -1,14 +1,39 @@
 #!/bin/bash
-export DRP_VERSION="w_2025_09"
-export COLLECTION_TAG="DM-49235"
 
 run_dash() {
+    parse_input_arguments $@
     print_banner
     setup_lsst_stack
     create_output_dir
     create_log_file
     fetch_stages
     run_stages
+}
+
+parse_input_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --DRP_VERSION)
+                DRP_VERSION=$2
+                shift 2
+                ;;
+            --COLLECTION_TAG)
+                COLLECTION_TAG=$2
+                shift 2
+                ;;
+            *)
+                echo "Usage: $0 --DRP_VERSION version --COLLECTION_TAG tag"
+                exit 1
+                ;;
+        esac
+    done
+    if [[ -z $DRP_VERSION || -z $COLLECTION_TAG ]]; then
+        echo "Error: Both --DRP_VERSION and --COLLECTION_TAG arguments are required."
+        echo "Usage: $0 --DRP_VERSION version --COLLECTION_TAG tag"
+        exit 1
+    fi
+    export DRP_VERSION
+    export COLLECTION_TAG
 }
 
 print_banner() {
@@ -90,4 +115,4 @@ print_runtime_readable_format() {
     printf $formatting_header $stage_name "$runtime_str (HH:MM:SS)"
 }
 
-run_dash
+run_dash $@
