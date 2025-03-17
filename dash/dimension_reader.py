@@ -31,9 +31,7 @@ class DimensionParquetReader(ParquetReader):
             ):
                 table = pa.Table.from_batches([smaller_table])
                 table = table.replace_schema_metadata()
-
-                # Filter rows with undefined coordinates
-                table = _filter_rows_with_undefined_coordinates(table)
+                table = _filter_rows(table)
 
                 if read_columns is None:
                     ## splitting stage - add in dimension columns
@@ -60,33 +58,35 @@ class DimensionParquetReader(ParquetReader):
             yield pa.concat_tables(batch_tables)
 
 
-def _filter_rows_with_undefined_coordinates(table):
-    """Filter rows with invalid/undefined coordinates.
-    
-    We know that:
-    - DIA object, DIA source and source have "ra"/"dec" columns
-    - DIA forced source, object and forced source have "coord_ra"/"coord_dec" columns
+def _filter_rows(table):
+    """Filter invalid and/or undesired rows.
+
+    - Rows with invalid/undefined ra/dec coordinates
+    - Rows belonging to non-primary detections
     """
     coordinates = None
 
+    # DIA object, DIA source and source have "ra"/"dec" columns
     coordinates_1 = ["ra", "dec"]
+    # DIA forced source, object and forced source have "coord_ra"/"coord_dec" columns
     coordinates_2 = ["coord_ra", "coord_dec"]
-    
+
     if all(col in table.column_names for col in coordinates_1):
         coordinates = coordinates_1
     elif all(col in table.column_names for col in coordinates_2):
         coordinates = coordinates_2
-    
     if coordinates is None:
         raise ValueError("ra/dec columns not found")
 
     ra_values = table[coordinates[0]]
     dec_values = table[coordinates[1]]
-
-    # Filter rows where either ra/dec coordinate is null
     invalid_ra_mask = pc.is_null(ra_values, nan_is_null=True)
     invalid_dec_mask = pc.is_null(dec_values, nan_is_null=True)
-    mask = pc.or_(invalid_ra_mask, invalid_dec_mask)
-    filtered_table = table.filter(pc.invert(mask))
-    
+    mask = pc.invert(invalid_ra_mask | invalid_dec_mask)
+
+    # Filter out all non-primary detections
+    if "detect_isPrimary" in table.column_names:
+        mask = mask & pc.field("detect_isPrimary")
+
+    filtered_table = table.filter(mask)
     return filtered_table
