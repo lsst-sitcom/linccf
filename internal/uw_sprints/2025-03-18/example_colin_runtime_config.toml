@@ -1,0 +1,48 @@
+# All values set here will be applied to the resource configuration prior to 
+# calling parsl.load(config). Even if the key does't exist in the resource
+# config, it will be added with the value defined here.
+[resource_config_modifiers]
+checkpoint_mode = 'task_exit'
+
+
+# Values in the apps.XXX section will be passed as a dictionary to the corresponding
+# app. e.g. apps.create_uri_manifest will be passed to the create_uri_manifest app.
+[apps.create_manifest]
+# The path to the staging directory
+staging_directory = "/sdf/data/rubin/user/wbeebe/parsl/staging_new" # TODO update
+output_directory = "/sdf/data/rubin/user/wbeebe/parsl/staging_new/test_output" # TODO Update
+file_pattern = "*.collection"
+helio_guess_dists = [5.0, 39.0] # TODO shoose your guess distances
+
+
+[apps.ic_to_wu]
+# The path to the KBMOD search config file
+# e.g. "/gscratch/dirac/kbmod/workflow/kbmod_search_config.yaml"
+search_config_filepath = "/sdf/data/rubin/user/wbeebe/parsl/staging_new/tiny_search_config.yaml" # TODO use your own path
+
+# The path to the butler config file that instantiate a butler to retrieve images
+butler_config_filepath = "embargo"
+
+# Remove a previously created WU file if it exists
+overwrite = false
+
+helio_guess_dists = [5.0, 39.0] # Again update the guess distances
+
+
+[apps.reproject_wu]
+search_config_filepath = "/sdf/data/rubin/user/wbeebe/parsl/staging_new/tiny_search_config.yaml" # TODO use your own path
+
+# Number of processors to use for parallelizing the reprojection
+n_workers = 32
+
+# The name of the observation site to use for reflex correction
+observation_site = "Rubin"
+
+helio_guess_dists = [5.0, 39.0]
+
+[apps.kbmod_search]
+# The path to the KBMOD search config file
+# e.g. "/gscratch/dirac/kbmod/workflow/kbmod_search_config.yaml"
+search_config_filepath = "/sdf/data/rubin/user/wbeebe/parsl/staging_new/tiny_search_config.yaml" # TODO use your own path
+
+helio_guess_dists = [5.0, 39.0] # Again update the guess distances
