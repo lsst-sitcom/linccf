@@ -12,21 +12,20 @@ This is not a simple copy of the files, however, as we add value along the way.
 
 There are three primary output tables:
 
-* `diaObject_lc`
-    * Combines data from three Butler tables: `diaObjectTable_tract`,
-      `diaSourceTable_tract`, `forcedSourceOnDiaObjectTable`
-    * "Nests" the diaSourceTable and forcedSourceOnDiaObject tables as structured
+* `dia_object_lc`
+    * Combines data from three Butler tables: `dia_object`, `dia_source`, `dia_object_forced_source`
+    * "Nests" the dia_source and dia_object_forced_source tables as structured
         lists under each object row. Sources within an object are sorted by detection time.
     
 * `object_lc`
-    * Combines data from two Butler tables: `objectTable`, `forcedSourceTable`
-    * "Nests" the forcedSourceTable table as structured lists under each object row. Sources
+    * Combines data from two Butler tables: `object`, `object_forced_source`
+    * "Nests" the object_forced_source table as structured lists under each object row. Sources
       within an object are sorted by detection time.
 
 * `source`
-    * Contains data from the Butler table: `sourceTable`
+    * Contains data from the Butler table: `source`
     * It is a flat table with the sources detected in science imaging. It is an independent
-      table because there is no association between objects of the `objectTable` and the
+      table because there is no association between objects of the `object` table and the
       existing sources.
 
 ## Butler post-processing
@@ -36,26 +35,27 @@ We add value as we're reading those files, and in post-processing shortly after.
 
 * `object` table - limit to only ~100 columns (from original TODO how many?)
 * Remove any rows that have nan or null ra/dec (or coord_ra/coord_dec) values. 
+* Remove any rows from object/source/dia_object_forced_source that are not primary detections.
 * We append columns to the results that correspond to Butler dimensions.
   In practice, this means that we retain information on tract and patch that
   are otherwise not stored either in Butler's backing parquet files, or typically
   returned in a call to get a single data table from the Butler (but is inferable
   from the Butler data reference).
-    * 'diaObjectTable_tract':["tract"],
-    * 'diaSourceTable_tract':["tract"],
-    * 'forcedSourceOnDiaObjectTable':["patch", "tract"],
-    * 'objectTable':["patch", "tract"],
-    * 'sourceTable':["band","day_obs","detector","physical_filter","visit"],
-    * 'forcedSourceTable':["patch", "tract"]
+    * dia_object: ["tract"]
+    * dia_source: ["tract"]
+    * dia_object_forced_source: ["patch", "tract"]
+    * object: ["patch", "tract"]
+    * source: ["band","day_obs","physical_filter","visit"]
+    * object_forced_source: ["patch", "tract"]
 * For all flux (and fluxErr) columns, use the known zero-point to calculate 
     corresponding mag (and magErr) in nJy:
-    * diaSource: ["psf", "science"]
-    * diaForcedSource: ["psf"]
+    * dia_source: ["psf", "science"]
+    * dia_object_forced_source: ["psf"]
     * object: ['u_psf', 'u_kron', 'g_psf', 'g_kron', 'r_psf', 'r_kron', 'i_psf', 'i_kron', 'z_psf', 'z_kron', 'y_psf', 'y_kron']
     * source: ["psf"]
-    * forcedSource: ["psf"]
+    * object_forced_source: ["psf"]
 * Add midpointTai in MJD to source-like tables, where only `visitId` is stored 
-    (source, diaForcedSource, forcedSource). We do this with an offline join to the
+    (source, dia_object_forced_source, object_forced_source). We do this with an offline join to the
     `visitTable`.
 
 ## Validation
@@ -74,14 +74,22 @@ Once catalogs have been created, we perform some science validation on the catal
     * Compute weighted mean, grouping by field and band, for all four source types
 
 
+## Benchmarking
 
-
-
-
-
-
-
-
+| Stage name                       | Runtime (HH:MM:SS) |
+|----------------------------------|--------------------|
+| 01-Butler.ipynb                  | 00:03:19           |
+| 02-Raw_file_sizes.ipynb          | 00:00:32           |
+| 03-Import.ipynb                  | 00:22:25           |
+| 04-Post_processing.ipynb         | 00:03:10           |
+| 05-Nesting.ipynb                 | 00:05:30           |
+| 06.a-Basic_Statistics.ipynb      | 00:00:28           |
+| 06.b-ByField.ipynb               | 00:04:20           |
+| 07-Crossmatch_ZTF_PS1.ipynb      | 00:16:07           |
+| 08-Generate_margins.ipynb        | 00:03:41           |
+| 09-Generate_index_catalogs.ipynb | 00:01:27           |
+| 10-Generate_weekly_JSON.ipynb    | 00:00:16           |
+| **Total runtime**                | 01:01:15           |
 
 
 ## Reference Materials
@@ -100,4 +108,3 @@ Once catalogs have been created, we perform some science validation on the catal
 Other useful material:
 - Ex JIRA ticket: https://rubinobs.atlassian.net/browse/DM-48478
 - https://github.com/LSSTScienceCollaborations/StackClub/tree/master
-
