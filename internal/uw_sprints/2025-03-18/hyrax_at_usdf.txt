@@ -1,0 +1,8 @@
+Aritra/Michael/Peter: We have created a user script to install hyrax (formerly known as fibad) on USDF
+In $HOME/notebooks/.usersetups we put:
+pushd ~
+git clone https://github.com/lincc-frameworks/fibad.git
+pushd fibad
+pip install -e .'[dev]'
+popd
+popd
