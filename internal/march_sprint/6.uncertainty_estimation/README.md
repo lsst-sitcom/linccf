@@ -22,3 +22,29 @@ Compare the histogram with the standard distribution.
 ### Tuesday, March 18
 
 Goal for today: step 1. Get boring lightcurves.
+
+So. How do I filter out rows where the lightcurves are too short? The painfully obvious things I'm doing aren't working.
+
+The silly brute force method seems to work ok. So I'm going to go with that for a little while.
+
+```
+obs_mask = [len(n) > 1 for n in field_frame["diaSource"]]
+field_frame = field_frame[obs_mask]
+```
+
+But trying this on THE ENTIRE `diaObject` catalog is taking fooooorrrreeevvveeerrr. Sure wish we
+could have a progress bar, like civilized people.
+
+But also, the distribution of lightcurve lengths is whack.
+
+![alt text](image-1.png)
+
+Look at that! 99%+ of diaObjects have lightcurves that have JUST ONE observation. Neven says these are "fake detections".
+This might not be a very useful data set. Maybe I should have started with `object_lc` instead...
+
+### Thursday
+
+What happened to Wednesday?!
+
+USDF RSP won't start a notebook instance for me. So I'm going to wait an hour and see if that clears ... something. 
+That worked last time.
