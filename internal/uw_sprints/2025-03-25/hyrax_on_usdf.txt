@@ -1,0 +1,13 @@
+Michael, Drew, Aritra (feat Nevin)
+
+Working on getting cutouts for hyrax, so that we can use LSST as a data source. We had some trouble with figuring out the appropriate 
+data set and name to use for calexps, but eventually settled on v29_0_0_rc2 (DM-49592) and the name 'deep_coadd' as being fundamentally correct.
+
+We have working code in mtauraso's rubin-user directory which:
+1) Can find tract/patch for an arbitrary RA/DEC
+2) Can find an ra/dec for an arbitrary tract/patch pixel using the wcs
+3) Can request a calexp from ra/dec and filters
+4) Can render the calexp in a notebook
+
+Next steps are to start doing the necessary bounding-box math in order to make cutouts from lists of ra/dec.
+I think we have basically all of the interface-with-RSP bits we need to get started on a prototype LSST Fibad data loader.
