@@ -97,3 +97,6 @@ Getting some mixed messaging from Kostya and Neven and Google, but settled on so
 C'mon - wouldn't you be happy with that too?
 
 That's only for one partition in `object_lc`, and only in the `r` band. I'll try to get the full stuff going.
+
+### Wednesday
+
