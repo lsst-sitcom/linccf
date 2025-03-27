@@ -3,7 +3,7 @@
 **Overall goal:** Compare periods from periodic objects we found in Rubin ComCam data to other surveys. We can use this for validation and interesting science.
 
 1. Take all periodic objects that Kostya has found in the ComCam data.
-2. Find the corresponding objects in the other survey. 
+2. Find the corresponding objects in the other survey.
 3. If the periods are not computed in that survey, run the LombScargle algorithm on the lightcurves to obtain them.
 4. Compare the results.
 5. Start with Gaia and expand to ZTF, PanSTARRS and DES.
@@ -30,3 +30,9 @@ Debugged why the periods I was getting for both ZTF and PS1 were so odd, and out
 
 I was going to have a look at Gaia. Turns out the main catalog does not contain the period estimates. These are in a separate catalog which wasn't ported from hipscat to hats. The script to do hats convertion already exists [here](https://github.com/delucchi-cmu/hipscripts/blob/e4f1bc683238a35eb8becc007912cc50334c8fb3/epyc/hats_conversion/create_epoch_photometry_hats.py#L51).
 I executed it but I ran into issues with Dask.
+
+#### Thu, Mar 27
+
+Taking a final stab at the comparison with Gaia. After discussing it with Doug, I am following his strategy. I am going to load the variability catalogs for VRRLyrae and Cepheids as they have very-well defined periods already specified.
+
+Well, only 8 out of 10 objects had a match in Gaia. Of those, we only got period estimates for 2 of them. I checked the classification for these objects on Vizier and it makes sense - they are VRRLyrae, and for those we had period information. The remaining ones are eclipsing binaries. I'll try to find the missing periods on the Variability Star Catalog (VSX).
