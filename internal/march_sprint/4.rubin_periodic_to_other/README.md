@@ -36,3 +36,7 @@ I executed it but I ran into issues with Dask.
 Taking a final stab at the comparison with Gaia. After discussing it with Doug, I am following his strategy. I am going to load the variability catalogs for VRRLyrae and Cepheids as they have very-well defined periods already specified.
 
 Well, only 8 out of 10 objects had a match in Gaia. Of those, we only got period estimates for 2 of them. I checked the classification for these objects on Vizier and it makes sense - they are VRRLyrae, and for those we had period information. The remaining ones are eclipsing binaries. I'll try to find the missing periods on the Variability Star Catalog (VSX).
+
+#### Fri, Mar 28
+
+Last minute changes. Fixed a bug found on the period calculation.
