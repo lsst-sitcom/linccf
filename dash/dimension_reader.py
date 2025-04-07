@@ -9,23 +9,15 @@ import pyarrow.parquet as pq
 
 class DimensionParquetReader(ParquetReader):
 
-    PRIMARY_FLAG_COL = "detect_isPrimary"
-
-    def __init__(
-        self, chunksize=500_000, column_names=None, filter_non_primary=False, **kwargs
-    ):
+    def __init__(self, chunksize=500_000, column_names=None, **kwargs):
         self.chunksize = chunksize
         self.column_names = column_names
-        self.filter_non_primary = filter_non_primary
         self.kwargs = kwargs
 
     def read(self, input_file, read_columns=None):
         self.regular_file_exists(input_file, **self.kwargs)
 
         columns = read_columns or self.column_names
-        # If `filter_non_primary` is set, we need to load the primary column
-        if self.filter_non_primary and columns and self.PRIMARY_FLAG_COL not in columns:
-            columns.append(self.PRIMARY_FLAG_COL)
 
         batch_files = pd.read_csv(input_file)
         added_columns = set(batch_files.columns) - set(["path"])
@@ -40,7 +32,7 @@ class DimensionParquetReader(ParquetReader):
             ):
                 table = pa.Table.from_batches([smaller_table])
                 table = table.replace_schema_metadata()
-                table = self._filter_rows(table)
+                table = self._filter_rows_with_undefined_coordinates(table)
 
                 if read_columns is None:
                     ## splitting stage - add in dimension columns
@@ -66,11 +58,12 @@ class DimensionParquetReader(ParquetReader):
         if len(batch_tables) > 0:
             yield pa.concat_tables(batch_tables)
 
-    def _filter_rows(self, table):
-        """Filter invalid and/or undesired rows.
+    def _filter_rows_with_undefined_coordinates(self, table):
+        """Filter rows with invalid/undefined coordinates.
 
-        - Rows with invalid/undefined ra/dec coordinates
-        - Rows belonging to non-primary detections
+        We know that:
+        - DIA object, DIA source and source have "ra"/"dec" columns
+        - DIA forced source, object and forced source have "coord_ra"/"coord_dec" columns
         """
         coordinates = None
 
@@ -91,11 +84,6 @@ class DimensionParquetReader(ParquetReader):
         invalid_ra_mask = pc.is_null(ra_values, nan_is_null=True)
         invalid_dec_mask = pc.is_null(dec_values, nan_is_null=True)
         inverse_mask = pc.or_(invalid_ra_mask, invalid_dec_mask)
-
-        # Filter out all non-primary detections
-        if self.filter_non_primary:
-            non_primary_mask = pc.invert(table[self.PRIMARY_FLAG_COL])
-            inverse_mask = pc.or_(inverse_mask, non_primary_mask)
-
         filtered_table = table.filter(pc.invert(inverse_mask))
+
         return filtered_table
