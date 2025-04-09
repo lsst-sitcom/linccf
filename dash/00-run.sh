@@ -98,6 +98,7 @@ run_stages() {
     done
 
     print_runtime_readable_format "Total_runtime" total_runtime
+    printf $formatting_header "Total_runtime" $runtime_str >> $output_file
     echo "DASH pipeline finished. Logs in $output_dir."
 }
 
