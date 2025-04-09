@@ -74,22 +74,22 @@ Once catalogs have been created, we perform some science validation on the catal
     (ECDFS, EDFS, Rubin*SV_38_7, Rubin_SV_95*-25, 47_Tuc, Fornax_dSph)
   - Compute weighted mean, grouping by field and band, for all four source types
 
-## Benchmarking
+## Benchmarking (v29_0_0_rc5)
 
 | Stage name                       | Runtime (HH:MM:SS) |
 | -------------------------------- | ------------------ |
-| 01-Butler.ipynb                  | 00:03:44           |
-| 02-Raw_file_sizes.ipynb          | 00:00:19           |
-| 03-Import.ipynb                  | 00:11:22           |
-| 04-Post_processing.ipynb         | 00:01:39           |
-| 05-Nesting.ipynb                 | 00:02:41           |
-| 06.a-Basic_Statistics.ipynb      | 00:00:23           |
-| 06.b-ByField.ipynb               | 00:02:17           |
-| 07-Crossmatch_ZTF_PS1.ipynb      | 00:09:12           |
-| 08-Generate_margins.ipynb        | 00:01:36           |
-| 09-Generate_index_catalogs.ipynb | 00:00:35           |
+| 01-Butler.ipynb                  | 00:03:23           |
+| 02-Raw_file_sizes.ipynb          | 00:00:17           |
+| 03-Import.ipynb                  | 00:07:05           |
+| 04-Post_processing.ipynb         | 00:01:46           |
+| 05-Nesting.ipynb                 | 00:02:49           |
+| 06.a-Basic_Statistics.ipynb      | 00:00:13           |
+| 06.b-ByField.ipynb               | 00:02:51           |
+| 07-Crossmatch_ZTF_PS1.ipynb      | 00:02:39           |
+| 08-Generate_margins.ipynb        | 00:01:18           |
+| 09-Generate_index_catalogs.ipynb | 00:00:32           |
 | 10-Generate_weekly_JSON.ipynb    | 00:00:15           |
-| **Total runtime**                | 00:34:03           |
+| **Total runtime**                | 00:23:08           |
 
 ## Reference Materials
 
