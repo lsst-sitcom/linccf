@@ -1,10 +1,12 @@
 from functools import lru_cache
 from io import BytesIO
+from contextlib import contextmanager
 
 import astropy.units as u
 import lsst.geom as geom
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from astropy.coordinates import SkyCoord
@@ -22,6 +24,17 @@ BAND_COLORS = {'u': '#0c71ff', 'g': '#49be61', 'r': '#c61c00',
                'i': '#ffc200', 'z': '#f341a2', 'y': '#5d0000'}
 
 
+@contextmanager
+def show_all_rows():
+    old_value = pd.get_option("display.max_rows")
+    pd.set_option("display.max_rows", None)
+    try:
+        yield
+    finally:
+        pd.set_option("display.max_rows", old_value)
+
+
+
 def create_wcs(ra, dec, size=100, pixel_scale=0.2):
     w = WCS(naxis=2)
     w.wcs.crpix = [size / 2, size / 2]
@@ -31,25 +44,32 @@ def create_wcs(ra, dec, size=100, pixel_scale=0.2):
     return w
 
 
-def get_cutout(butler, data_id, ra, dec, size=100):
-    wcs = butler.get('calexp.wcs', **data_id)
-    detector_box = butler.get('calexp.detector', **data_id).getBBox()
+def get_cutout(butler, data_id, ra, dec, size=100, image_type="direct"):
+    if image_type.lower() == "direct":
+        collection = "visit_image"
+    elif image_type.lower() == "dia":
+        collection = "difference_image"
+    else:
+        raise ValueError(f"Unknown image type: {image_type}")
+
+    wcs = butler.get(f'{collection}.wcs', **data_id)
+    detector_box = butler.get(f'{collection}.detector', **data_id).getBBox()
     xy = geom.PointI(wcs.skyToPixel(geom.SpherePoint(ra, dec, geom.degrees)))
 
     cutout_size = geom.ExtentI(size, size)
     cutout_box = geom.BoxI(xy - cutout_size // 2, cutout_size)
     cutout_box = cutout_box.clippedTo(detector_box)
 
-    return butler.get('calexp', **data_id, parameters={'bbox': cutout_box}), cutout_box
+    return butler.get(collection, **data_id, parameters={'bbox': cutout_box}), cutout_box
 
 
-def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=None):
+def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=None, image_type="direct"):
     data_id = dict(visit=visit_id, detector=detector_id, instrument="LSSTComCam")
     
-    cutout, cutout_box = get_cutout(butler, data_id, ra, dec, size=size)
+    cutout, cutout_box = get_cutout(butler, data_id, ra, dec, size=size, image_type=image_type)
     cutout_box_min_corner = cutout_box.getCorners()[0]
 
-    cutout10_array = get_cutout(butler, data_id, ra, dec, size=10)[0].getImage().getArray()
+    cutout10_array = get_cutout(butler, data_id, ra, dec, size=10, image_type=image_type)[0].getImage().getArray()
     ap10_flux = cutout10_array.sum()
 
     astropy_wcs = WCS(cutout.wcs.getFitsMetadata())
@@ -69,7 +89,16 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
         astropy_wcs = reproject_wcs
     
     interval = ZScaleInterval()
-    _vmin, vmax = interval.get_limits(cutout10_array)
+    vmin, vmax = interval.get_limits(cutout10_array)
+    if image_type == "direct":
+        vmin = 0
+        cmap = "gray"
+    elif image_type == "dia":
+        vmax = max(abs(vmin), abs(vmax))
+        vmin = -vmax
+        cmap = "managua"
+    else:
+        raise ValueError(f"Unknown image type: {image_type}")
 
     plt.figure(figsize=(8, 8), dpi=200)
     plt.subplot(projection=astropy_wcs)
@@ -82,7 +111,7 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
     lat.set_ticklabel(exclude_overlapping=False)
     lon.set_ticklabel_position('b')
     lat.set_ticklabel_position('l')
-    plt.imshow(image_array, cmap='gray', vmin=0, vmax=vmax, origin='lower')
+    plt.imshow(image_array, cmap=cmap, vmin=vmin, vmax=vmax, origin='lower')
     plt.xlabel('RA')
     plt.ylabel('Dec')
     # circle patch for source position
@@ -108,7 +137,7 @@ def load_object_and_forced(oid, hats_path, filter=True):
     filters = [("objectId", "==", oid)]
 
     comcam_obj = hats_path / "object"
-    comcam_src = hats_path / "forcedSource"
+    comcam_src = hats_path / "object_forced_source"
 
     obj = read_hats(
         comcam_obj,
@@ -135,7 +164,16 @@ def load_object_and_forced(oid, hats_path, filter=True):
     return ndf.iloc[0]
 
 
-def make_figure(oid, butler, hats_path, image_size=100):
+def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
+    if image_type == "direct":
+        phot_col = "psfMag"
+        inverse_y = True
+    elif image_type == "dia":
+        phot_col = "psfDiffFlux"
+        inverse_y = False
+    else:
+        raise ValueError(f"Unknown image type: {image_type}")
+
     data = load_object_and_forced(oid, hats_path)
     lc = data.lc.sort_values("midpointMjdTai").reset_index()
 
@@ -155,13 +193,14 @@ def make_figure(oid, butler, hats_path, image_size=100):
             dec=data.coord_dec,
             size=image_size,
             reproject_wcs=wcs,
+            image_type=image_type,
         )
         return image
 
     def update_text_by_idx(idx):
         row = lc.iloc[idx]
         out_text.clear_output()
-        with out_text:
+        with out_text, show_all_rows():
             display(row)
 
     update_text_by_idx(0)
@@ -169,21 +208,23 @@ def make_figure(oid, butler, hats_path, image_size=100):
     # Light curve plot
     y_min, y_max = lc.psfMag.min(), lc.psfMag.max()
     y_ampl = y_max - y_min
-    range_y = [y_max + 0.1 * y_ampl, y_min - 0.1 * y_ampl]
+    range_y = [y_min - 0.1 * y_ampl, y_max + 0.1 * y_ampl]
+    if inverse_y:
+        range_y = range_y[::-1]
     colors = lc["band"].map(BAND_COLORS)
     scatter_trace = go.Scatter(
         x=lc["midpointMjdTai"],
-        y=lc["psfMag"],
-        error_y=dict(type="data", array=lc["psfMagErr"], visible=True),
+        y=lc[phot_col],
+        error_y=dict(type="data", array=lc[f"{phot_col}Err"], visible=True),
         mode="markers",
         marker=dict(size=10, color=colors),  # Use color mapping
         name="Light Curve"
     )
     lc_fig = go.FigureWidget(data=[scatter_trace])
     lc_fig.update_layout(
-        title=f"{data.objectId}",
+        title=f"{data.objectId} {image_type}",
         xaxis_title="midpointMjdTai",
-        yaxis_title="psfMag",
+        yaxis_title=phot_col,
         yaxis=dict(range=range_y),
         width=800,
         height=600,
