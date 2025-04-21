@@ -164,7 +164,7 @@ def load_object_and_forced(oid, hats_path, filter=True):
     return ndf.iloc[0]
 
 
-def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
+def light_curve_plotly_figure(data, *, image_type):
     if image_type == "direct":
         phot_col = "psfMag"
         inverse_y = True
@@ -174,6 +174,58 @@ def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
     else:
         raise ValueError(f"Unknown image type: {image_type}")
 
+    lc = data.lc
+
+    y_min, y_max = lc.psfMag.min(), lc.psfMag.max()
+    y_ampl = y_max - y_min
+    range_y = [y_min - 0.1 * y_ampl, y_max + 0.1 * y_ampl]
+    if inverse_y:
+        range_y = range_y[::-1]
+    colors = lc["band"].map(BAND_COLORS)
+    scatter_trace = go.Scatter(
+        x=lc["midpointMjdTai"],
+        y=lc[phot_col],
+        error_y=dict(type="data", array=lc[f"{phot_col}Err"], visible=True),
+        mode="markers",
+        marker=dict(size=10, color=colors),  # Use color mapping
+        name="Light Curve"
+    )
+    lc_fig = go.FigureWidget(data=[scatter_trace])
+    lc_fig.update_layout(
+        title=f"{data.objectId} {image_type}",
+        xaxis_title="midpointMjdTai",
+        yaxis_title=phot_col,
+        yaxis=dict(range=range_y),
+        width=800,
+        height=600,
+    )
+    return lc_fig
+
+
+def cutout_plotly_figure(image):
+    return go.FigureWidget(
+        data=[go.Image(z=image)],
+        layout=dict(
+            width=800,
+            height=800,
+            xaxis=dict(
+                visible=False,  # Hide x-axis
+                showgrid=False,  # Remove grid
+                zeroline=False,
+                showticklabels=False
+            ),
+            yaxis=dict(
+                visible=False,  # Hide y-axis
+                showgrid=False,  # Remove grid
+                zeroline=False,
+                showticklabels=False
+            ),
+            margin=dict(l=0, r=0, t=0, b=0)  # Remove any margins
+        )
+    )
+
+
+def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
     data = load_object_and_forced(oid, hats_path)
     lc = data.lc.sort_values("midpointMjdTai").reset_index()
 
@@ -206,55 +258,14 @@ def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
     update_text_by_idx(0)
 
     # Light curve plot
-    y_min, y_max = lc.psfMag.min(), lc.psfMag.max()
-    y_ampl = y_max - y_min
-    range_y = [y_min - 0.1 * y_ampl, y_max + 0.1 * y_ampl]
-    if inverse_y:
-        range_y = range_y[::-1]
-    colors = lc["band"].map(BAND_COLORS)
-    scatter_trace = go.Scatter(
-        x=lc["midpointMjdTai"],
-        y=lc[phot_col],
-        error_y=dict(type="data", array=lc[f"{phot_col}Err"], visible=True),
-        mode="markers",
-        marker=dict(size=10, color=colors),  # Use color mapping
-        name="Light Curve"
-    )
-    lc_fig = go.FigureWidget(data=[scatter_trace])
-    lc_fig.update_layout(
-        title=f"{data.objectId} {image_type}",
-        xaxis_title="midpointMjdTai",
-        yaxis_title=phot_col,
-        yaxis=dict(range=range_y),
-        width=800,
-        height=600,
-    )
+    lc_fig = light_curve_plotly_figure(data=data, image_type=image_type)
     out_lc_fig = Output()
     with out_lc_fig:
         display(lc_fig)
 
     # Cutout
     image = get_image_by_idx(0)
-    cutout_fig = go.FigureWidget(
-        data=[go.Image(z=image)],
-        layout=dict(
-            width=800,
-            height=800,
-            xaxis=dict(
-                visible=False,  # Hide x-axis
-                showgrid=False,  # Remove grid
-                zeroline=False,
-                showticklabels=False
-            ),
-            yaxis=dict(
-                visible=False,  # Hide y-axis
-                showgrid=False,  # Remove grid
-                zeroline=False,
-                showticklabels=False
-            ),
-            margin=dict(l=0, r=0, t=0, b=0)  # Remove any margins
-        )
-    )
+    cutout_fig = cutout_plotly_figure(image)
     out_cutout_fig = Output()
     with out_cutout_fig:
         display(cutout_fig)
