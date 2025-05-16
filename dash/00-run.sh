@@ -8,37 +8,45 @@ run_dash() {
     create_log_file
     fetch_stages
     run_stages
+    
+    if [ "$INSTRUMENT" = "LSSTCam" ]; then
+        upload_to_embargo
+    fi
 }
 
 parse_input_arguments() {
     while [[ $# -gt 0 ]]; do
-        case $1 in
-            --DRP_VERSION)
-                DRP_VERSION=$2
-                shift 2
-                ;;
-            --COLLECTION_TAG)
-                COLLECTION_TAG=$2
-                shift 2
-                ;;
-            *)
-                echo "Usage: $0 --DRP_VERSION version --COLLECTION_TAG tag"
+        if [[ "$1" == --* ]]; then
+            key="${1#--}"  # Strip leading --
+            val="$2"
+            if [[ -z "$val" || "$val" == --* ]]; then
+                echo "Error: Missing value for --$key"
                 exit 1
-                ;;
-        esac
+            fi
+            export "$key=$val"
+            shift 2
+        else
+            echo "Unknown argument: $1"
+            exit 1
+        fi
     done
-    if [[ -z $DRP_VERSION || -z $COLLECTION_TAG ]]; then
-        echo "Error: Both --DRP_VERSION and --COLLECTION_TAG arguments are required."
-        echo "Usage: $0 --DRP_VERSION version --COLLECTION_TAG tag"
+
+    missing=0
+    for var in INSTRUMENT REPO RUN VERSION COLLECTION OUTPUT_DIR; do
+        if [ -z "${!var}" ]; then
+            echo "Error: --$var is required"
+            missing=1
+        fi
+    done
+    if [ "$missing" -ne 0 ]; then
+        echo "Usage: $0 --INSTRUMENT name --REPO path --RUN id --VERSION version --COLLECTION tag --OUTPUT_DIR dir"
         exit 1
     fi
-    export DRP_VERSION
-    export COLLECTION_TAG
 }
 
 print_banner() {
     echo "----- DASH Import Pipeline -----"
-    echo "Starting import of $DRP_VERSION..."
+    echo "Starting import of $VERSION..."
 }
 
 setup_lsst_stack() {
@@ -48,8 +56,8 @@ setup_lsst_stack() {
 }
 
 create_output_dir() {
-    output_dir="outputs/$DRP_VERSION"
-    if [ -d $output_dir ]; then
+    output_dir="outputs/$VERSION"
+    if [ -d "$output_dir" ]; then
         echo "Directory $output_dir already exists! Exiting..." >&2
         exit 1
     fi
@@ -114,6 +122,26 @@ print_runtime_readable_format() {
     
     # Print in HH:MM:SS format with zero padding
     printf $formatting_header $stage_name "$runtime_str (HH:MM:SS)"
+}
+
+upload_to_embargo() {
+    local s3_bucket=s3://rubin-lincc-hats
+
+    local hats_dir=$OUTPUT_DIR/hats/$VERSION
+    local raw_dir=$OUTPUT_DIR/raw/$VERSION
+    local validation_dir=$OUTPUT_DIR/validation/$VERSION
+
+    echo "Uploading $hats_dir..."
+    #aws s3 cp $hats_dir $s3_bucket/hats/$VERSION --recursive
+
+    echo "Uploading $raw_dir..."
+    #aws s3 cp $raw_dir $s3_bucket/raw/$VERSION --recursive
+    
+    echo "Uploading $validation_dir..."
+    #aws s3 cp $validation_dir $s3_bucket/validation/$VERSION --recursive
+ 
+    echo "Removing all data from temporary local storage..."
+    #rm -rf $hats_dir $raw_dir $validation_dir
 }
 
 run_dash $@
