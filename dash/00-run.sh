@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 run_dash() {
     parse_input_arguments $@
@@ -8,7 +9,7 @@ run_dash() {
     create_log_file
     fetch_stages
     run_stages
-    
+
     if [ "$INSTRUMENT" = "LSSTCam" ]; then
         upload_to_embargo
     fi
@@ -125,23 +126,26 @@ print_runtime_readable_format() {
 }
 
 upload_to_embargo() {
-    local s3_bucket=s3://rubin-lincc-hats
+    # See aws-cli#9214
+    pip install awscli==1.36.0 --quiet
+    
+    local s3_bucket="s3://rubin-lincc-hats"
 
     local hats_dir=$OUTPUT_DIR/hats/$VERSION
     local raw_dir=$OUTPUT_DIR/raw/$VERSION
     local validation_dir=$OUTPUT_DIR/validation/$VERSION
 
     echo "Uploading $hats_dir..."
-    #aws s3 cp $hats_dir $s3_bucket/hats/$VERSION --recursive
+    aws s3 cp $hats_dir $s3_bucket/hats/$VERSION --recursive
 
     echo "Uploading $raw_dir..."
-    #aws s3 cp $raw_dir $s3_bucket/raw/$VERSION --recursive
+    aws s3 cp $raw_dir $s3_bucket/raw/$VERSION --recursive
     
     echo "Uploading $validation_dir..."
-    #aws s3 cp $validation_dir $s3_bucket/validation/$VERSION --recursive
+    aws s3 cp $validation_dir $s3_bucket/validation/$VERSION --recursive
  
     echo "Removing all data from temporary local storage..."
-    #rm -rf $hats_dir $raw_dir $validation_dir
+    rm -rf $hats_dir $raw_dir $validation_dir
 }
 
 run_dash $@
