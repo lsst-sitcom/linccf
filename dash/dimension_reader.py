@@ -40,7 +40,8 @@ class DimensionParquetReader(ParquetReader):
                         for column in added_columns:
                             if column not in table.column_names:
                                 table = table.append_column(
-                                    column, [np.full(len(table), fill_value=row[column])]
+                                    column,
+                                    [np.full(len(table), fill_value=row[column])],
                                 )
                     if batch_size + len(table) >= self.chunksize:
                         # We've hit our chunksize, send the batch off to the task.
