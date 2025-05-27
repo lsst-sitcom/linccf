@@ -1,9 +1,9 @@
-from hats_import.catalog.file_readers import ParquetReader
-
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from hats_import.catalog.file_readers import ParquetReader
+from lsst.resources import ResourcePath
 
 
 class DimensionParquetReader(ParquetReader):
@@ -25,33 +25,35 @@ class DimensionParquetReader(ParquetReader):
         batch_tables = []
 
         for _, row in batch_files.iterrows():
-            parquet_file = pq.ParquetFile(row["path"], **self.kwargs)
-            for smaller_table in parquet_file.iter_batches(
-                batch_size=self.chunksize, columns=columns
-            ):
-                table = pa.Table.from_batches([smaller_table])
-                table = table.replace_schema_metadata()
+            with ResourcePath(row["path"]).open("rb") as f:
+                parquet_file = pq.ParquetFile(f, **self.kwargs)
+                for smaller_table in parquet_file.iter_batches(
+                    batch_size=self.chunksize, columns=columns
+                ):
+                    table = pa.Table.from_batches([smaller_table])
+                    table = table.replace_schema_metadata()
 
-                if read_columns is None:
-                    ## splitting stage - add in dimension columns
-                    for column in added_columns:
-                        if column not in table.column_names:
-                            table = table.append_column(
-                                column, [np.full(len(table), fill_value=row[column])]
-                            )
-                if batch_size + len(table) >= self.chunksize:
-                    # We've hit our chunksize, send the batch off to the task.
-                    if len(batch_tables) == 0:
-                        yield table
-                        batch_size = 0
+                    if read_columns is None:
+                        ## splitting stage - add in dimension columns
+                        for column in added_columns:
+                            if column not in table.column_names:
+                                table = table.append_column(
+                                    column,
+                                    [np.full(len(table), fill_value=row[column])],
+                                )
+                    if batch_size + len(table) >= self.chunksize:
+                        # We've hit our chunksize, send the batch off to the task.
+                        if len(batch_tables) == 0:
+                            yield table
+                            batch_size = 0
+                        else:
+                            yield pa.concat_tables(batch_tables)
+                            batch_tables = []
+                            batch_tables.append(table)
+                            batch_size = len(table)
                     else:
-                        yield pa.concat_tables(batch_tables)
-                        batch_tables = []
                         batch_tables.append(table)
-                        batch_size = len(table)
-                else:
-                    batch_tables.append(table)
-                    batch_size += len(table)
+                        batch_size += len(table)
 
         if len(batch_tables) > 0:
             yield pa.concat_tables(batch_tables)

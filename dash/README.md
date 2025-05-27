@@ -10,21 +10,31 @@ Make sure you give the `00-run.sh` script permission to be executed:
 chmod +x 00-run.sh
 ```
 
-Execute it with the desired DRP_VERSION and COLLECTION_TAG. Example:
+Execute it with the desired VERSION and COLLECTION. Example:
 
 ```
-./00-run.sh --DRP_VERSION w_2025_10 --COLLECTION_TAG DM-49359
+./00-run.sh \
+    --INSTRUMENT LSSTComCam \
+    --REPO /repo/dp1 \
+    --RUN DP1 \
+    --VERSION w_2025_10 \
+    --COLLECTION DM-49359 \
+    --OUTPUT_DIR /sdf/data/rubin/shared/lsdb_commissioning
 ```
 
-This will trigger a sequential execution of all pipeline stages. The output Jupyter notebooks will be stored under `outputs/{DRP_VERSION}`. There will also be a log file with the runtime details.
+This will trigger a sequential execution of all pipeline stages. The output Jupyter notebooks will be stored under `outputs/{VERSION}`. There will also be a log file with the runtime details.
 
 ### 2. Interactive execution
 
-Export DRP_VERSION and COLLECTION_TAG as environment variables. Example:
+Export the arguments as environment variables. Example:
 
 ```
-export DRP_VERSION="w_2025_10"
-export COLLECTION_TAG="DM-49359"
+export INSTRUMENT=LSSTComCam
+export REPO=/repo/dp1
+export RUN=DP1
+export VERSION=w_2025_10
+export COLLECTION=DM-49359
+export OUTPUT_DIR=/sdf/data/rubin/shared/lsdb_commissioning
 ```
 
 Run Jupyter from the same command-line:
