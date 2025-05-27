@@ -1,10 +1,8 @@
-from hats_import.catalog.file_readers import ParquetReader
-
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
+from hats_import.catalog.file_readers import ParquetReader
 from lsst.resources import ResourcePath
 
 
