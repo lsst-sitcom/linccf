@@ -141,7 +141,7 @@ def load_object_and_forced(oid, hats_path, filter=True):
 
     obj = read_hats(
         comcam_obj,
-        columns=["objectId", "coord_ra", "coord_dec"],
+        # columns=["objectId", "coord_ra", "coord_dec"],
         filters=filters,
     )
     src_flat = read_hats(comcam_src, filters=filters)
