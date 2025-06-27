@@ -41,6 +41,7 @@ def create_wcs(ra, dec, size=100, pixel_scale=0.2):
     w.wcs.crval = [ra, dec]
     w.wcs.cdelt = [pixel_scale / 3600] * 2  # LSST pixel scale
     w.wcs.ctype = ["RA---TAN", "DEC--TAN"]  # Use TAN projection
+    w.wcs.crota = [0.0, 0.0]  # No rotation
     return w
 
 
@@ -72,7 +73,16 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
     cutout10_array = get_cutout(butler, data_id, ra, dec, size=10, image_type=image_type)[0].getImage().getArray()
     ap10_flux = cutout10_array.sum()
 
-    astropy_wcs = WCS(cutout.wcs.getFitsMetadata())
+    try:
+        astropy_wcs = WCS(cutout.wcs.getFitsMetadata())
+    except RuntimeError:
+        astropy_wcs = WCS(naxis=2)
+        astropy_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        astropy_wcs.wcs.cd = cutout.wcs.getCdMatrix()
+        sky_origin = cutout.wcs.getSkyOrigin()
+        astropy_wcs.wcs.crval = [sky_origin.getRa().asDegrees(), sky_origin.getDec().asDegrees()]
+        pixel_origin = cutout.wcs.getPixelOrigin()
+        astropy_wcs.wcs.crpix = [pixel_origin.getX(), pixel_origin.getY()]
     astropy_wcs.wcs.crpix[0] -= cutout_box_min_corner.x
     astropy_wcs.wcs.crpix[1] -= cutout_box_min_corner.y
 
@@ -136,23 +146,47 @@ def plot_cutout(butler, visit_id, detector_id, ra, dec, size=100, reproject_wcs=
 def load_object_and_forced(oid, hats_path, filter=True):
     filters = [("objectId", "==", oid)]
 
-    comcam_obj = hats_path / "object"
-    comcam_src = hats_path / "object_forced_source"
+    # comcam_obj = hats_path / "object"
+    # comcam_src = hats_path / "object_forced_source"
+    path = hats_path / "object_collection"
 
-    obj = read_hats(
-        comcam_obj,
+    catalog = read_hats(
+        path,
         # columns=["objectId", "coord_ra", "coord_dec"],
         filters=filters,
-    )
-    src_flat = read_hats(comcam_src, filters=filters)
-    src_nested = obj.join_nested(
-        src_flat,
-        nested_column_name="lc",
-        left_on="objectId",
-        right_on="objectId",
+    ).map_partitions(
+        lambda df: df.rename(columns={"objectForcedSource": "lc"})
     )
 
-    ndf = src_nested.compute()
+    ndf = catalog.compute()
+    if filter:
+        ndf = ndf.query(
+            "~lc.psfFlux_flag"
+            " and ~lc.pixelFlags_suspect"
+            " and ~lc.pixelFlags_saturated"
+            " and ~lc.pixelFlags_cr"
+            " and ~lc.pixelFlags_bad"
+        )
+    return ndf.iloc[0]
+
+
+@lru_cache(maxsize=1024)
+def load_dia_object_and_forced(oid, hats_path, filter=True):
+    filters = [("diaObjectId", "==", oid)]
+
+    # comcam_obj = hats_path / "object"
+    # comcam_src = hats_path / "object_forced_source"
+    path = hats_path / "dia_object_collection"
+
+    catalog = read_hats(
+        path,
+        # columns=["objectId", "coord_ra", "coord_dec"],
+        filters=filters,
+    ).map_partitions(
+        lambda df: df.rename(columns={"diaObjectForcedSource": "lc"})
+    )
+
+    ndf = catalog.compute()
     if filter:
         ndf = ndf.query(
             "~lc.psfFlux_flag"
@@ -225,8 +259,16 @@ def cutout_plotly_figure(image):
     )
 
 
-def make_figure(oid, butler, hats_path, image_size=100, image_type="direct"):
-    data = load_object_and_forced(oid, hats_path)
+def make_figure(oid, butler, hats_path, image_size=100, lc_object_type="object", image_type="direct"):
+    if lc_object_type == "object":
+        data = load_object_and_forced(oid, hats_path)
+    elif lc_object_type == "dia_object":
+        data = load_dia_object_and_forced(oid, hats_path)
+        data["coord_ra"] = data["ra"]
+        data["coord_dec"] = data["dec"]
+        data["objectId"] = data["diaObjectId"]
+    else:
+        raise ValueError(f"Unknown lc_object_type: {lc_object_type}")
     lc = data.lc.sort_values("midpointMjdTai").reset_index()
 
     wcs = create_wcs(data.coord_ra, data.coord_dec, size=image_size)
