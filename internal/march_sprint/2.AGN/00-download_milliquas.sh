@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directory to save the file(s)
-output_dir="/sdf/data/rubin/u/olynn/AGNs/raw_data"
+output_dir="/sdf/data/rubin/u/olynn/AGNs_tmp/raw_data"
 
 # Raw data
 # See: https://quasars.org/milliquas.htm
