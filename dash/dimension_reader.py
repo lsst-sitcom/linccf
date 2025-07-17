@@ -27,6 +27,10 @@ class DimensionParquetReader(ParquetReader):
         for _, row in batch_files.iterrows():
             with ResourcePath(row["path"]).open("rb") as f:
                 parquet_file = pq.ParquetFile(f, **self.kwargs)
+                # ### Do not attempt to process empty files
+                if parquet_file.metadata.num_rows == 0:
+                    continue
+                # ### end of patch
                 for smaller_table in parquet_file.iter_batches(
                     batch_size=self.chunksize, columns=columns
                 ):
