@@ -169,7 +169,9 @@ def download_prefix(
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as pool:
         futures = [pool.submit(_download, obj) for obj in objs]
-        for f in tqdm(concurrent.futures.as_completed(futures), total=len(futures), unit="file"):
+        for f in tqdm(
+            concurrent.futures.as_completed(futures), total=len(futures), unit="file"
+        ):
             try:
                 f_downloaded, f_failures = f.result()
                 downloaded += f_downloaded
@@ -185,7 +187,9 @@ def download_prefix(
     return downloaded, failures
 
 
-def delete_prefix(client, bucket: str, prefix: str, *, dry_run: bool, batch_size: int = 1000) -> int:
+def delete_prefix(
+    client, bucket: str, prefix: str, *, dry_run: bool, batch_size: int = 1000
+) -> int:
     objs = list_objects(client, bucket, prefix)
     if not objs:
         logging.info("No objects to delete under s3://%s/%s", bucket, prefix)
@@ -368,7 +372,7 @@ def main():
         args.deadline,
         args.max_concurrency,
         args.dry_run,
-        args.continue_on_error
+        args.continue_on_error,
     )
 
     if overall_failures:
