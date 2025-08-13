@@ -21,6 +21,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from tqdm import tqdm
 from typing import Iterable
 from zoneinfo import ZoneInfo
 
@@ -140,7 +141,7 @@ def download_prefix(
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     if dry_run:
-        for obj in objs:
+        for obj in tqdm(objs, unit="file"):
             logging.info(
                 "DRY-RUN download -> %s", dest_dir / relative_key_path(obj.key, prefix)
             )
@@ -168,7 +169,7 @@ def download_prefix(
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as pool:
         futures = [pool.submit(_download, obj) for obj in objs]
-        for f in concurrent.futures.as_completed(futures):
+        for f in tqdm(concurrent.futures.as_completed(futures), total=len(futures), unit="file"):
             try:
                 f_downloaded, f_failures = f.result()
                 downloaded += f_downloaded
@@ -191,13 +192,13 @@ def delete_prefix(client, bucket: str, prefix: str, *, dry_run: bool, batch_size
         return 0
 
     if dry_run:
-        for obj in objs:
+        for obj in tqdm(objs):
             logging.info("DRY-RUN delete -> s3://%s/%s", bucket, obj.key)
         return 0
 
     deleted = 0
     keys = [{"Key": obj.key} for obj in objs]
-    for i in range(0, len(keys), batch_size):
+    for i in tqdm(list(range(0, len(keys), batch_size)), unit="batch"):
         batch = {"Objects": keys[i : i + batch_size], "Quiet": True}
         try:
             resp = client.delete_objects(Bucket=bucket, Delete=batch)
@@ -365,6 +366,9 @@ def main():
         args.version,
         Path(args.output_dir).resolve(),
         args.deadline,
+        args.max_concurrency,
+        args.dry_run,
+        args.continue_on_error
     )
 
     if overall_failures:
