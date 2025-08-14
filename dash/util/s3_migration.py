@@ -147,22 +147,20 @@ def download_prefix(
         return 0, 0
 
     def _download(obj: S3Object):
-        f_downloaded, f_failures = 0, 0
+        f_downloaded = 0
         rel = relative_key_path(obj.key, prefix)
         target = dest_dir / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             transfer.download_file(bucket, obj.key, str(target))
             f_downloaded += 1
-        except (BotoCoreError, ClientError) as e:
+        except Exception as e:
             logging.error(
                 "Failed to download s3://%s/%s -> %s: %s", bucket, obj.key, target, e
             )
-            f_failures += 1
             raise
-        return f_downloaded, f_failures
+        return f_downloaded
 
-    failures = 0
     downloaded = 0
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as pool:
@@ -171,16 +169,16 @@ def download_prefix(
             concurrent.futures.as_completed(futures), total=len(futures), unit="file"
         ):
             try:
-                f_downloaded, f_failures = f.result()
+                f_downloaded = f.result()
                 downloaded += f_downloaded
-                failures += f_failures
             except Exception:
+                logging.info("Canceling undone futures")
                 # Cancel remaining
                 for other in futures:
                     other.cancel()
                 break
 
-    return downloaded, failures
+    return downloaded
 
 
 def delete_prefix(
