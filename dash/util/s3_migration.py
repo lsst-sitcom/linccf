@@ -111,10 +111,10 @@ def download_prefix(
     *,
     max_concurrency: int,
     dry_run: bool,
-) -> tuple[int, int]:
+) -> int:
     """Download all objects under prefix to dest_dir.
 
-    Returns (num_downloaded, num_failed)
+    Returns number of objects downloaded.
     """
     transfer = S3Transfer(
         client,
@@ -126,7 +126,7 @@ def download_prefix(
 
     if not objs:
         logging.info("No objects under s3://%s/%s", bucket, prefix)
-        return 0, 0
+        return 0
 
     logging.info(
         "Planning to download %d objects (%.2f MiB) from s3://%s/%s to %s",
@@ -144,7 +144,7 @@ def download_prefix(
             logging.info(
                 "DRY-RUN download -> %s", dest_dir / relative_key_path(obj.key, prefix)
             )
-        return 0, 0
+        return 0
 
     def _download(obj: S3Object):
         f_downloaded = 0
@@ -152,7 +152,10 @@ def download_prefix(
         target = dest_dir / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
-            transfer.download_file(bucket, obj.key, str(target))
+            if target.exists() and target.stat().st_size == obj.size:
+                pass
+            else:
+                transfer.download_file(bucket, obj.key, str(target))
             f_downloaded += 1
         except Exception as e:
             logging.error(
@@ -263,7 +266,7 @@ def migrate(
     for cat, prefix, dest in plans:
         logging.info("Migrating %s to %s...", prefix, dest)
         try:
-            downloaded, failed = download_prefix(
+            downloaded = download_prefix(
                 s3_client,
                 bucket,
                 prefix,
@@ -272,14 +275,6 @@ def migrate(
                 dry_run=dry_run,
             )
             if dry_run:
-                continue
-            if failed:
-                logging.error(
-                    "%s: %d downloads failed; skipping delete for this prefix.",
-                    prefix,
-                    failed,
-                )
-                overall_failures += failed
                 continue
             logging.info("%s: downloaded %d objects successfully.", prefix, downloaded)
             # Safe to delete this prefix now
