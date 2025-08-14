@@ -355,11 +355,8 @@ def main():
 
     setup_logging(args.log_level)
 
-    # Prepare AWS clients
-    if args.profile:
-        session = boto3.session.Session(profile_name=args.profile)
-    else:
-        session = boto3.session.Session()
+    # Prepare AWS client
+    session = boto3.session.Session(profile_name=args.profile)
     s3_client = session.client(
         "s3", config=Config(retries={"max_attempts": 10, "mode": "adaptive"})
     )
