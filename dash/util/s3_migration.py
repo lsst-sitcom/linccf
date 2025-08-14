@@ -10,7 +10,7 @@ if they are older than the provided deadline.
 Notes:
 - Only deletes S3 objects after a successful download of the corresponding prefix.
 - Supports optional --dry-run to preview actions.
-- Exits non‑zero on any failed transfer unless --continue-on-error is set.
+- Exits non‑zero on any failed transfer.
 """
 from __future__ import annotations
 
@@ -111,7 +111,6 @@ def download_prefix(
     *,
     max_concurrency: int,
     dry_run: bool,
-    continue_on_error: bool,
 ) -> tuple[int, int]:
     """Download all objects under prefix to dest_dir.
 
@@ -160,8 +159,7 @@ def download_prefix(
                 "Failed to download s3://%s/%s -> %s: %s", bucket, obj.key, target, e
             )
             f_failures += 1
-            if not continue_on_error:
-                raise
+            raise
         return f_downloaded, f_failures
 
     failures = 0
@@ -177,12 +175,10 @@ def download_prefix(
                 downloaded += f_downloaded
                 failures += f_failures
             except Exception:
-                # Already logged; if continue_on_error=False, this will break quickly
-                if not continue_on_error:
-                    # Cancel remaining
-                    for other in futures:
-                        other.cancel()
-                    break
+                # Cancel remaining
+                for other in futures:
+                    other.cancel()
+                break
 
     return downloaded, failures
 
@@ -227,7 +223,6 @@ def migrate(
     given_deadline: str,
     max_concurrency: int,
     dry_run: bool,
-    continue_on_error: bool,
 ) -> int:
     """
     Migrates data from the given S3 bucket to the given output directory,
@@ -277,7 +272,6 @@ def migrate(
                 dest,
                 max_concurrency=max_concurrency,
                 dry_run=dry_run,
-                continue_on_error=continue_on_error,
             )
             if dry_run:
                 continue
@@ -296,8 +290,7 @@ def migrate(
         except Exception as e:
             logging.error("Migration failed for %s: %s", prefix, e)
             overall_failures += 1
-            if not continue_on_error:
-                break
+            break
 
     return overall_failures
 
@@ -335,11 +328,6 @@ def main():
         help="Show planned actions without executing them",
     )
     parser.add_argument(
-        "--continue-on-error",
-        action="store_true",
-        help="Continue downloads even if some fail; still aborts delete if any failed",
-    )
-    parser.add_argument(
         "--max-concurrency",
         type=int,
         default=min(32, (os.cpu_count() or 4) * 4),
@@ -369,7 +357,6 @@ def main():
         args.deadline,
         args.max_concurrency,
         args.dry_run,
-        args.continue_on_error,
     )
 
     if overall_failures:
