@@ -15,7 +15,6 @@ Notes:
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import dataclasses
 import logging
 import os
@@ -132,7 +131,7 @@ def download_prefix(
     logging.info(
         "Planning to download %d objects (%.2f MiB) from s3://%s/%s to %s",
         len(objs),
-        sum(obj.size for obj in objs) / 1024 / 1024,
+        sum(obj.size for obj in objs) / 1024**2,
         bucket,
         prefix,
         dest_dir,
@@ -167,18 +166,8 @@ def download_prefix(
 
     downloaded = 0
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as pool:
-        futures = [pool.submit(_download, obj) for obj in objs]
-        for f in tqdm(
-            concurrent.futures.as_completed(futures), total=len(futures), unit="file"
-        ):
-            try:
-                f_downloaded = f.result()
-                downloaded += f_downloaded
-            except Exception:
-                logging.info("Canceling undone futures")
-                pool.shutdown(wait=False, cancel_futures=True)
-                raise
+    for obj in tqdm(objs, unit="file"):
+        downloaded += _download(obj)
 
     return downloaded
 
@@ -322,7 +311,7 @@ def main():
     parser.add_argument(
         "--max-concurrency",
         type=int,
-        default=min(32, (os.cpu_count() or 4) * 4),
+        default=min(4, (os.cpu_count() or 4) * 4),
         help="Max concurrent transfers",
     )
     parser.add_argument(
