@@ -98,7 +98,8 @@ def newest_last_modified(objs: Iterable[S3Object]) -> datetime | None:
 
 
 def relative_key_path(key: str, base_prefix: str) -> str:
-    assert key.startswith(base_prefix)
+    if not key.startswith(base_prefix):
+        raise ValueError(f"{base_prefix} is not a prefix of {key}")
     rel = key[len(base_prefix) :]
     return rel
 
@@ -176,10 +177,8 @@ def download_prefix(
                 downloaded += f_downloaded
             except Exception:
                 logging.info("Canceling undone futures")
-                # Cancel remaining
-                for other in futures:
-                    other.cancel()
-                break
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise
 
     return downloaded
 
