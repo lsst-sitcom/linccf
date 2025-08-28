@@ -285,7 +285,7 @@ def main():
         "--version", default=os.getenv("VERSION"), required=True, help="Version string"
     )
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         default=os.getenv("OUTPUT_DIR"),
         required=True,
         help="Local output directory root",
