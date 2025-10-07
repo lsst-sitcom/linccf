@@ -10,7 +10,7 @@ run_dash() {
     fetch_stages
     run_stages
 
-    if [ "$INSTRUMENT" = "LSSTCam" ]; then
+    if [ "$INSTRUMENT" = "LSSTCam" ] && [ "$REPO" = "/repo/embargo" ]; then
         upload_to_embargo
     fi
 }
