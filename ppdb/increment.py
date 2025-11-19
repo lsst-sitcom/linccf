@@ -15,7 +15,7 @@ from lsdb.catalog.dataset.dataset import Dataset
 from lsdb.io.to_hats import calculate_histogram, create_modified_catalog_structure
 
 # The new parquet files will be named after the current date.
-NPIX_SUFFIX = f"/{datetime.now().strftime("%Y-%m-%d")}.parquet"
+NPIX_SUFFIX = f"/{datetime.now().strftime('%Y-%m-%d')}.parquet"
 
 
 def write_partitions(catalog, base_catalog_dir, histogram_order, **kwargs):

@@ -1,3 +1,5 @@
+"""Utilities to aggregate daily pixel data"""
+
 import hats as hc
 import numpy as np
 import pandas as pd
@@ -6,8 +8,8 @@ from lsdb.dask.merge_catalog_functions import (
     align_and_apply,
     align_catalogs,
     construct_catalog_args,
-    get_healpix_pixels_from_alignment,
     filter_by_spatial_index_to_pixel,
+    get_healpix_pixels_from_alignment,
 )
 
 
@@ -39,7 +41,9 @@ def perform_join_on(df, margin, df_pixel, *args):
     final_df = pd.concat([df, margin])
 
     # 2. Order each object by validityStart
-    final_df = final_df.sort_values(["diaObjectId", "validityStart"], ascending=[True,False])
+    final_df = final_df.sort_values(
+        ["diaObjectId", "validityStart"], ascending=[True, False]
+    )
 
     # 3. Get the sources for all the objects
     final_df["diaSource.diaObjectId"] = final_df["diaObjectId"]
@@ -57,7 +61,9 @@ def perform_join_on(df, margin, df_pixel, *args):
     final_df = final_df.join_nested(fsources, "diaForcedSource", on="diaObjectId")
 
     # 6. Filter out points outside of the pixel (that are therefore in margin)
-    final_df = filter_by_spatial_index_to_pixel(final_df, df_pixel.order, df_pixel.pixel)
+    final_df = filter_by_spatial_index_to_pixel(
+        final_df, df_pixel.order, df_pixel.pixel
+    )
 
     # 7. Make sure columns keep the same order
     return final_df[original_cols]
