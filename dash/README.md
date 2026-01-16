@@ -26,7 +26,13 @@ immediately terminated if you exit the shell.  To avoid this, do not
 exit from the reserved node, but do a `tmux` detach.  Your route into
 the reserved node should look something like this:
 
-    login-node -> tmux -> interactive-node -> reserved node
+```mermaid
+graph LR
+    L["<i>login node</i>"] --> T("<code>tmux</code>")
+    T --> I["<i>interactive node</i>"]
+    I --> R["<i>reserved node</i>"]
+style T fill:lightblue,stroke:darkblue,stroke-width:2px
+```
 
 This way, it's easy to return to your login node (make sure it's the
 same one each time), `tmux attach`, and be right back at your reserved
