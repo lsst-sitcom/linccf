@@ -12,7 +12,7 @@ from hats.io.parquet_metadata import write_parquet_metadata
 from tqdm import tqdm
 
 
-def postprocess_catalog(catalog_name, flux_col_prefixes, hats_dir, client):
+def postprocess_catalog(client, hats_dir, catalog_name, flux_col_prefixes, validity_col=None):
     catalog_dir = f"{hats_dir}/{catalog_name}"
     catalog = hats.read_hats(catalog_dir)
     futures = []
@@ -23,6 +23,7 @@ def postprocess_catalog(catalog_name, flux_col_prefixes, hats_dir, client):
                 catalog_dir=catalog_dir,
                 target_pixel=target_pixel,
                 flux_col_prefixes=flux_col_prefixes,
+                validity_col=validity_col,
             )
         )
     for future in tqdm(as_completed(futures), desc=catalog_name, total=len(futures)):
@@ -31,14 +32,14 @@ def postprocess_catalog(catalog_name, flux_col_prefixes, hats_dir, client):
     rewrite_catalog_metadata(catalog, hats_dir)
 
 
-def process_partition(catalog_dir, target_pixel, flux_col_prefixes):
+def process_partition(catalog_dir, target_pixel, flux_col_prefixes, validity_col):
     """Apply post-processing steps to each individual partition"""
     # Read partition
     file_path = hats.io.pixel_catalog_file(catalog_dir, target_pixel)
     table = pd.read_parquet(file_path, dtype_backend="pyarrow")
     # Apply transformations
-    if "validityStart" in table.columns:
-        table = select_by_latest_validity(table)
+    if validity_col and validity_col in table.columns:
+        table = select_by_latest_validity(table, validity_col)
     if len(flux_col_prefixes) > 0:
         table = append_mag_and_magerr(table, flux_col_prefixes)
     table = cast_columns_float32(table)
@@ -60,9 +61,9 @@ def rewrite_catalog_metadata(catalog, hats_dir):
     updated_info.to_properties_file(destination_path)
 
 
-def select_by_latest_validity(table):
+def select_by_latest_validity(table, validity_col):
     """Select rows with the latest validityStart for each object."""
-    return table.sort_values("validityStart").drop_duplicates(
+    return table.sort_values(validity_col).drop_duplicates(
         "diaObjectId", keep="last"
     )
 
