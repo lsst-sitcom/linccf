@@ -15,7 +15,10 @@ and showcasing science workflows using LSDB on those catalogs.
 - [`demo_notebooks/`](./demo_notebooks/) - Science notebooks show-casing LSDB use on RSP with early data products.
 - [`dp1_variability/`](./dp1_variability/) - Notebooks for exploration of dim variable sources in the DP1 dataset.
 - [`RSP/`](./RSP/) - Notebooks for continuous integration testing of HATS data products to be served in RSP.
-- [`ppdb/`](./ppdb/) - Notebooks for incremental imports of Prompt Products Database (PPDB).
+
+## Other efforts
+
+- [`ppdb_hats`](https://github.com/astronomy-commons/ppdb_hats) - Pipelines for incremental imports of Prompt Products Database (PPDB).
 
 ## Acknowledgements
 
