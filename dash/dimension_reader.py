@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from hats_import.catalog.file_readers import ParquetReader
+from hats_import.catalog.file_readers import InputReader
 from lsst.resources import ResourcePath
 
 
-class DimensionParquetReader(ParquetReader):
+class DimensionParquetReader(InputReader):
 
     def __init__(self, chunksize=500_000, column_names=None, **kwargs):
         self.chunksize = chunksize
