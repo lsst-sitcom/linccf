@@ -9,3 +9,13 @@ Compare among these 3 methods:
 ## Definition of done:
 - Three runnable implementations with the same dataset slice.
 - Comparative table for speed/memory/ease-of-use.
+
+
+## Claude Notes:
+In this assignment, I didn't feel that there was a pathway for Claude/another AI to get to a runnable implementation, so as the main deliverable on this front I'll try to just explain the steps I took, and the limitations I saw.
+### Iteration 1
+### Iteration 2
+### Iteration 3
+### Iteration 4
+
+
