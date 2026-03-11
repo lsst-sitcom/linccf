@@ -1,0 +1,6 @@
+Peter, Michael, Aritra
+
+As part of making hyrax work on the USDF RSP, Michael was able to get one calexp patch image from the butler.
+Next steps are to make cutouts from this calexp on arbitrary ra/dec boxes ignoring cases where the ra/dec box intersects the edge of the patch.
+
+Aritra and Peter downloaded Euclid VIS and NSIP data that overlaps with COMCAM. Data stored both on epyc and usdf.
