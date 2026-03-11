@@ -12,7 +12,7 @@ Compare among these 3 methods:
 
 
 ## Claude Notes:
-In this assignment, I didn't feel that there was a pathway for Claude/another AI to get to a runnable implementation, so as the main deliverable on this front I'll try to just explain the steps I took, and the limitations I saw.
+In this assignment, I didn't feel that there was a realistic pathway for Claude/another AI to get to a runnable implementation, so as the main deliverable on this front I'll try to just explain the steps I took, and the limitations I saw.
 ### Iteration 1
 I gave it a pretty open ended prompt to begin:
 
@@ -25,7 +25,17 @@ Another note is that Claude opted to grab 100 random RR Lyrae from vizier, which
 The actual analysis steps seemed okay at first glance (which is also AI's specialty), but I didn't work with it at that stage due to the data loading issues up front.
 
 ### Iteration 2
+
+Next, I made it aware of the HATS DP2 pilot:
+
+*Let's say that we were on a cluster with local access to a DP2 pilot, with this location: '/sdf/data/rubin/shared/lsdb_commissioning/hats/v30_0_0_rc2/object_collection'*
+
+*Please use this directly, instead of going through the TAP*
+
+It took the hint well here and pivoted to LSDB for the DP2 loading, but stuck with vizier for VSX loading. It (with some prompting) made note to try to load VSX RR Lyrae within the DP2 field, but the 186 candidates it found only resulted in a few matches when crossmatching with LSDB, through from_dataframe, both of which only had one observation. It then tried to unpack the nested columns for anaylsis. In hindsight I could have pushed on this more to try to use `map_rows` and nested-pandas operations more here, but was more focused on the failed sample collection.
 ### Iteration 3
+For iteration 3, I let Claude know that VSX is also available through HATS and to use LSDB for both catalogs, which it did. However, the filtering it did up front of VSX was to both find things only in a subset of the footprint and that have a known period, which failed to return any objects. It looks close to right, but maybe just need a few query tweaks, along with not requiring a period from VSX to be processed.
 ### Iteration 4
+Finally, because it wasn't finding any objects, I tried to have claude lean more on a full crossmatch to find any potential matches. However, this is where we entered LSDB performance issues, and I cycled off the AI side and really dove into LSDB performance issues.
 
 
