@@ -113,7 +113,7 @@ https://usdf-rsp.slac.stanford.edu/nb/user/delucchi/proxy/8787/status
 
 So I think this will take ... 3 hours? If it actually finishes?
 
-**Notebook 5:**
+**Notebook 10:**
 
 > Compute mean fluxes over forced sources and compute relative difference from object flux using: (mean_source_flux - object_flux) / sqrt(mean_source_fluxerr^2 + object_fluxerr). 
 > Plot:
@@ -137,6 +137,19 @@ Plan of attack:
     * histogram of values
 * and i think i want to just `to_hats` this, and not hold the whole thing in memory just yet.
 
+### Monday
+
+New week, new frustrations.
+
+I tried modifying notebook 4 to just use a catalog stream, and it runs out of memory after a few iterations.
+
+So for **Notebook 5**, I'm just using HATS. No lsdb, no dask, just one thread of work going. 
+
+![alt text](image.png)
+
+So far, it's actually running, not using a ton of memory, and might actually complete before the homework is due. I know that this isn't the full result I'm supposed to get to, but I want to get SOMETHING that completes.
+
+This is also using few-enough resources that I can iterate on the meatier parts in a different notebook in the same jupyter instance.
 
 ## Summary of feedback
 
@@ -150,3 +163,4 @@ There were a handful of pain points I experienced.
 * In DASH, would it be ok to create a per-detection "anyFlag" kind of value, to make filtering easier?
 * It was kind of a pain to get the detector plot. Would any one else want to re-use it?
   Could add to `lsdb-rubin` package.
+* would like to have a `hats.show_versions()` method, too
