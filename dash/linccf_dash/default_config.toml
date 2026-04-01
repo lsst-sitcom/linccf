@@ -1,0 +1,338 @@
+# Default DASH pipeline configuration.
+# Shipped with the package and applied as the base for every run.
+# Your run config is merged on top — only specify what differs.
+
+[stages]
+enabled = [
+    "butler",
+    "raw_sizes",
+    "import",
+    "postprocess",
+    "nesting",
+    "collections",
+    "generate_json",
+]
+
+# ---------------------------------------------------------------------------
+# Catalogs
+# ---------------------------------------------------------------------------
+
+[catalogs]
+enabled = [
+    "dia_object",
+    "dia_source",
+    "dia_object_forced_source",
+    "object",
+    "source",
+    "object_forced_source",
+]
+
+[catalogs.dia_object]
+dims             = ["tract"]
+group_by         = ["tract"]
+flux_columns     = []
+add_mjds         = false
+use_schema_file  = true
+chunksize        = 500_000
+
+[catalogs.dia_object.import_args]
+ra_column        = "ra"
+dec_column       = "dec"
+catalog_type     = "object"
+pixel_threshold  = 5_000_000
+simple_progress_bar = true
+resume           = false
+
+[catalogs.dia_source]
+dims             = ["tract"]
+group_by         = ["tract"]
+flux_columns     = ["psf", "science"]
+add_mjds         = false
+use_schema_file  = false
+chunksize        = 500_000
+
+[catalogs.dia_source.import_args]
+ra_column        = "ra"
+dec_column       = "dec"
+catalog_type     = "source"
+pixel_threshold  = 4_000_000
+simple_progress_bar = true
+resume           = false
+
+[catalogs.dia_object_forced_source]
+dims             = ["patch", "tract"]
+group_by         = ["tract"]
+flux_columns     = ["psf"]
+add_mjds         = true
+use_schema_file  = false
+chunksize        = 500_000
+
+[catalogs.dia_object_forced_source.import_args]
+ra_column        = "coord_ra"
+dec_column       = "coord_dec"
+catalog_type     = "source"
+pixel_threshold  = 25_000_000
+simple_progress_bar = true
+resume           = false
+
+[catalogs.object]
+dims             = ["tract"]
+group_by         = ["tract"]
+flux_columns     = [
+    "u_psf", "u_kron",
+    "g_psf", "g_kron",
+    "r_psf", "r_kron",
+    "i_psf", "i_kron",
+    "z_psf", "z_kron",
+    "y_psf", "y_kron",
+]
+add_mjds         = false
+use_schema_file  = true
+chunksize        = 250_000
+
+[catalogs.object.import_args]
+ra_column        = "coord_ra"
+dec_column       = "coord_dec"
+catalog_type     = "object"
+pixel_threshold  = 300_000
+simple_progress_bar = true
+resume           = false
+
+[catalogs.source]
+dims             = ["band", "day_obs", "physical_filter", "visit"]
+group_by         = ["band", "day_obs"]
+flux_columns     = ["psf"]
+add_mjds         = true
+use_schema_file  = false
+chunksize        = 500_000
+
+[catalogs.source.import_args]
+ra_column        = "ra"
+dec_column       = "dec"
+catalog_type     = "source"
+pixel_threshold  = 1_000_000
+simple_progress_bar = true
+resume           = false
+
+[catalogs.object_forced_source]
+dims             = ["patch", "tract"]
+group_by         = ["tract"]
+flux_columns     = ["psf"]
+add_mjds         = true
+use_schema_file  = false
+chunksize        = 500_000
+
+[catalogs.object_forced_source.import_args]
+ra_column        = "coord_ra"
+dec_column       = "coord_dec"
+catalog_type     = "source"
+pixel_threshold  = 25_000_000
+simple_progress_bar = true
+resume           = false
+
+# ---------------------------------------------------------------------------
+# Nested catalogs
+# ---------------------------------------------------------------------------
+
+[nested.dia_object_lc]
+object_catalog        = "dia_object"
+join_id               = "diaObjectId"
+source_catalogs       = ["dia_source", "dia_object_forced_source"]
+nested_column_names   = ["diaSource", "diaObjectForcedSource"]
+sort_column           = "midpointMjdTai"
+margin_radius_arcsec  = 2
+pixel_threshold       = 15_000
+highest_healpix_order = 11
+skymap_alt_orders     = [2, 4, 6]
+default_columns = [
+    "dec",
+    "diaObjectForcedSource.band",
+    "diaObjectForcedSource.coord_dec",
+    "diaObjectForcedSource.coord_ra",
+    "diaObjectForcedSource.diff_PixelFlags_nodataCenter",
+    "diaObjectForcedSource.invalidPsfFlag",
+    "diaObjectForcedSource.midpointMjdTai",
+    "diaObjectForcedSource.pixelFlags_bad",
+    "diaObjectForcedSource.pixelFlags_cr",
+    "diaObjectForcedSource.pixelFlags_crCenter",
+    "diaObjectForcedSource.pixelFlags_edge",
+    "diaObjectForcedSource.pixelFlags_interpolated",
+    "diaObjectForcedSource.pixelFlags_interpolatedCenter",
+    "diaObjectForcedSource.pixelFlags_nodata",
+    "diaObjectForcedSource.pixelFlags_saturated",
+    "diaObjectForcedSource.pixelFlags_saturatedCenter",
+    "diaObjectForcedSource.pixelFlags_suspect",
+    "diaObjectForcedSource.pixelFlags_suspectCenter",
+    "diaObjectForcedSource.psfDiffFlux",
+    "diaObjectForcedSource.psfDiffFlux_flag",
+    "diaObjectForcedSource.psfDiffFluxErr",
+    "diaObjectForcedSource.psfFlux",
+    "diaObjectForcedSource.psfFlux_flag",
+    "diaObjectForcedSource.psfFluxErr",
+    "diaObjectForcedSource.psfMag",
+    "diaObjectForcedSource.psfMagErr",
+    "diaObjectForcedSource.visit",
+    "diaObjectId",
+    "diaSource.band",
+    "diaSource.centroid_flag",
+    "diaSource.dec",
+    "diaSource.decErr",
+    "diaSource.ra",
+    "diaSource.raErr",
+    "diaSource.diaSourceId",
+    "diaSource.forced_PsfFlux_flag",
+    "diaSource.forced_PsfFlux_flag_edge",
+    "diaSource.forced_PsfFlux_flag_noGoodPixels",
+    "diaSource.midpointMjdTai",
+    "diaSource.pixelFlags",
+    "diaSource.pixelFlags_bad",
+    "diaSource.pixelFlags_cr",
+    "diaSource.pixelFlags_crCenter",
+    "diaSource.pixelFlags_edge",
+    "diaSource.pixelFlags_interpolated",
+    "diaSource.pixelFlags_interpolatedCenter",
+    "diaSource.pixelFlags_nodata",
+    "diaSource.pixelFlags_nodataCenter",
+    "diaSource.pixelFlags_offimage",
+    "diaSource.pixelFlags_saturated",
+    "diaSource.pixelFlags_saturatedCenter",
+    "diaSource.pixelFlags_streak",
+    "diaSource.pixelFlags_streakCenter",
+    "diaSource.pixelFlags_suspect",
+    "diaSource.pixelFlags_suspectCenter",
+    "diaSource.psfFlux",
+    "diaSource.psfFlux_flag",
+    "diaSource.psfFlux_flag_edge",
+    "diaSource.psfFlux_flag_noGoodPixels",
+    "diaSource.psfFluxErr",
+    "diaSource.psfMag",
+    "diaSource.psfMagErr",
+    "diaSource.reliability",
+    "diaSource.scienceFlux",
+    "diaSource.scienceFluxErr",
+    "diaSource.scienceMag",
+    "diaSource.scienceMagErr",
+    "diaSource.shape_flag",
+    "diaSource.shape_flag_no_pixels",
+    "diaSource.shape_flag_not_contained",
+    "diaSource.shape_flag_parent_source",
+    "diaSource.snr",
+    "diaSource.trail_flag_edge",
+    "diaSource.visit",
+    "diaSource.x",
+    "diaSource.xErr",
+    "diaSource.y",
+    "diaSource.yErr",
+    "nDiaSources",
+    "ra",
+    "tract",
+]
+
+[nested.object_lc]
+object_catalog        = "object"
+join_id               = "objectId"
+source_catalogs       = ["object_forced_source"]
+nested_column_names   = ["objectForcedSource"]
+sort_column           = "midpointMjdTai"
+margin_radius_arcsec  = 2
+pixel_threshold       = 15_000
+highest_healpix_order = 11
+skymap_alt_orders     = [2, 4, 6]
+default_columns = [
+    "coord_dec",
+    "coord_decErr",
+    "coord_ra",
+    "coord_raErr",
+    "g_psfFlux",
+    "g_psfFluxErr",
+    "g_psfMag",
+    "g_psfMagErr",
+    "i_psfFlux",
+    "i_psfFluxErr",
+    "i_psfMag",
+    "i_psfMagErr",
+    "objectForcedSource.band",
+    "objectForcedSource.coord_dec",
+    "objectForcedSource.coord_ra",
+    "objectForcedSource.detector",
+    "objectForcedSource.invalidPsfFlag",
+    "objectForcedSource.midpointMjdTai",
+    "objectForcedSource.pixelFlags_bad",
+    "objectForcedSource.pixelFlags_cr",
+    "objectForcedSource.pixelFlags_crCenter",
+    "objectForcedSource.pixelFlags_edge",
+    "objectForcedSource.pixelFlags_interpolated",
+    "objectForcedSource.pixelFlags_interpolatedCenter",
+    "objectForcedSource.pixelFlags_nodata",
+    "objectForcedSource.pixelFlags_saturated",
+    "objectForcedSource.pixelFlags_saturatedCenter",
+    "objectForcedSource.pixelFlags_suspect",
+    "objectForcedSource.pixelFlags_suspectCenter",
+    "objectForcedSource.psfDiffFlux",
+    "objectForcedSource.psfDiffFlux_flag",
+    "objectForcedSource.psfDiffFluxErr",
+    "objectForcedSource.psfFlux",
+    "objectForcedSource.psfFlux_flag",
+    "objectForcedSource.psfFluxErr",
+    "objectForcedSource.psfMag",
+    "objectForcedSource.psfMagErr",
+    "objectForcedSource.visit",
+    "objectId",
+    "patch",
+    "r_psfFlux",
+    "r_psfFluxErr",
+    "r_psfMag",
+    "r_psfMagErr",
+    "refBand",
+    "shape_flag",
+    "shape_xx",
+    "shape_xy",
+    "shape_yy",
+    "tract",
+    "u_psfFlux",
+    "u_psfFluxErr",
+    "u_psfMag",
+    "u_psfMagErr",
+    "y_psfFlux",
+    "y_psfFluxErr",
+    "y_psfMag",
+    "y_psfMagErr",
+    "z_psfFlux",
+    "z_psfFluxErr",
+    "z_psfMag",
+    "z_psfMagErr",
+]
+
+# ---------------------------------------------------------------------------
+# Collections
+# ---------------------------------------------------------------------------
+
+[collections.dia_object_collection]
+nested_catalog   = "dia_object_lc"
+margin_threshold = 5.0
+index_column     = "diaObjectId"
+
+[collections.object_collection]
+nested_catalog   = "object_lc"
+margin_threshold = 5.0
+index_column     = "objectId"
+
+# ---------------------------------------------------------------------------
+# Crossmatch surveys
+# ---------------------------------------------------------------------------
+
+[crossmatch.surveys.ztf_dr22]
+path           = "https://data.lsdb.io/hats/ztf_dr22"
+radius_arcsec  = 0.2
+n_neighbors    = 20
+suffix         = "_ztf"
+join_id_column = "objectid"
+
+[crossmatch.surveys.ps1]
+path            = "s3://stpubdata/panstarrs/ps1/public/hats/otmo"
+radius_arcsec   = 0.2
+n_neighbors     = 20
+suffix          = "_ps1"
+join_id_column  = "objID"
+s3_endpoint_url = "https://s3.amazonaws.com"
+s3_anon         = true

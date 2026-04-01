@@ -1,0 +1,46 @@
+# Minimal run config — all catalog/nested/collection/crossmatch defaults are inherited
+# from the package's default_config.toml. Only specify what changes for this run.
+#
+# Usage:
+#   dash run --config example_config.toml
+#
+# Layer multiple configs (later files win):
+#   dash run --config example_config.toml --config overrides.toml
+
+[run]
+instrument = "LSSTCam"
+repo       = "/repo/embargo"
+version    = "w_2025_49"
+collection = "DM-53545"
+output_dir = "/path/to/output"
+# run = "20250417_20250921"  # optional
+
+# ---------------------------------------------------------------------------
+# Override examples — uncomment and edit as needed
+# ---------------------------------------------------------------------------
+
+# Run only a subset of stages:
+# [stages]
+# enabled = ["butler", "raw_sizes", "import", "postprocess"]
+
+# Run only a subset of catalogs:
+# [catalogs]
+# enabled = ["dia_object", "object"]
+
+# Override a single import arg for one catalog:
+# [catalogs.dia_object.import_args]
+# pixel_threshold = 10_000_000
+
+# Add a new catalog not in the defaults (must supply all required fields):
+# [catalogs.my_custom_catalog]
+# dims            = ["tract"]
+# group_by        = ["tract"]
+# flux_columns    = []
+# add_mjds        = false
+# use_schema_file = false
+#
+# [catalogs.my_custom_catalog.import_args]
+# ra_column       = "ra"
+# dec_column      = "dec"
+# catalog_type    = "object"
+# pixel_threshold = 1_000_000

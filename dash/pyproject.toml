@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "linccf-dash"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "typer",
+    "pydantic>=2",
+    "hats-import",
+    "lsdb",
+    "astropy",
+    "dask[distributed]",
+    "pandas",
+    "pyarrow",
+    "tqdm",
+    "upath",
+]
+
+[project.scripts]
+dash = "linccf_dash.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["linccf_dash"]
