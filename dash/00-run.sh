@@ -33,7 +33,7 @@ parse_input_arguments() {
     done
 
     missing=0
-    for var in INSTRUMENT REPO RUN VERSION COLLECTION OUTPUT_DIR; do
+    for var in INSTRUMENT REPO VERSION COLLECTION OUTPUT_DIR; do
         if [ -z "${!var}" ]; then
             echo "Error: --$var is required"
             missing=1
