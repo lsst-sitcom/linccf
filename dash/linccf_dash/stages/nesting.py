@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 from pathlib import Path
 
 import lsdb
+from hats_import import pipeline_with_client
+from hats_import.catalog import ImportArguments
+from hats_import.margin_cache.margin_cache_arguments import MarginCacheArguments
 
 from linccf_dash.config import NestedConfig, PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
 
 
 def run_nesting(cfg: PipelineConfig) -> None:
-    from hats_import import pipeline_with_client
-    from hats_import.catalog import ImportArguments
-    from hats_import.margin_cache.margin_cache_arguments import MarginCacheArguments
-
     hats_dir = cfg.run.hats_dir
 
     with dask_client(n_workers=8, threads_per_worker=1, memory_limit="32GB") as client:
@@ -23,9 +23,6 @@ def run_nesting(cfg: PipelineConfig) -> None:
                 nested_cfg=nested_cfg,
                 hats_dir=hats_dir,
                 client=client,
-                pipeline_with_client=pipeline_with_client,
-                ImportArguments=ImportArguments,
-                MarginCacheArguments=MarginCacheArguments,
             )
 
 
@@ -34,11 +31,7 @@ def _build_nested_catalog(
     nested_cfg: NestedConfig,
     hats_dir: Path,
     client,
-    pipeline_with_client,
-    ImportArguments,
-    MarginCacheArguments,
 ) -> None:
-    import tempfile
     margin_tmp = tempfile.TemporaryDirectory()
     margin_dir = Path(margin_tmp.name)
 

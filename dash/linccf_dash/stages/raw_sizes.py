@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+from lsst.resources import ResourcePath
 from tqdm import tqdm
 
 from linccf_dash.config import CatalogConfig, PipelineConfig
@@ -23,8 +24,6 @@ def run_raw_sizes(cfg: PipelineConfig, catalog_filter: Optional[list[str]] = Non
 
 def _build_sizes_csv(catalog_name: str, catalog_cfg: CatalogConfig, raw_dir: Path) -> None:
     """Join refs CSV with paths and sample 100 files to estimate pixel thresholds."""
-    from lsst.resources import ResourcePath
-
     paths_file = raw_dir / "paths" / f"{catalog_name}.txt"
     paths = [p.strip() for p in paths_file.read_text(encoding="utf8").splitlines() if p.strip()]
     print(f"Found {len(paths)} files for {catalog_name}")

@@ -16,7 +16,7 @@ dependencies = [
     "pandas",
     "pyarrow",
     "tqdm",
-    "upath",
+    "universal-pathlib",
 ]
 
 [project.scripts]

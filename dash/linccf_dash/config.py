@@ -79,24 +79,12 @@ class CatalogConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_import_args(self) -> CatalogConfig:
-        if not self.import_args:
-            return self
         managed = set(self.import_args.keys()) & _IMPORT_ARGS_MANAGED
         if managed:
             raise ValueError(
                 f"These fields are managed automatically and cannot be set in import_args: "
                 f"{', '.join(sorted(managed))}"
             )
-        try:
-            from hats_import.catalog.arguments import ImportArguments
-            valid = set(ImportArguments.model_fields.keys())
-            unknown = set(self.import_args.keys()) - valid
-            if unknown:
-                raise ValueError(
-                    f"Unknown ImportArguments fields: {', '.join(sorted(unknown))}"
-                )
-        except ImportError:
-            pass  # validate lazily if hats_import isn't available yet
         return self
 
 

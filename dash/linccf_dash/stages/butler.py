@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import lsst.daf.butler as dafButler
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -13,8 +14,6 @@ from linccf_dash.config import PipelineConfig
 
 
 def run_butler(cfg: PipelineConfig, catalog_filter: Optional[list[str]] = None) -> None:
-    import lsst.daf.butler as dafButler
-
     raw_dir = cfg.run.raw_dir
     for subdir in ("paths", "refs", "sizes"):
         (raw_dir / subdir).mkdir(parents=True, exist_ok=True)

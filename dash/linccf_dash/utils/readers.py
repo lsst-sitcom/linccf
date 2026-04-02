@@ -7,6 +7,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from hats_import.catalog.file_readers import InputReader
+from lsst.resources import ResourcePath
 
 
 class DimensionParquetReader(InputReader):
@@ -18,10 +19,6 @@ class DimensionParquetReader(InputReader):
 
     def read(self, input_file, read_columns=None):
         self.regular_file_exists(input_file, **self.kwargs)
-
-        # Import here so the reader can be used without the full LSST stack
-        # being on the import path at module load time.
-        from lsst.resources import ResourcePath
 
         columns = read_columns or self.column_names
 

@@ -6,6 +6,9 @@ from typing import Optional
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from hats_import import pipeline_with_client
+from hats_import.catalog.arguments import ImportArguments
+from lsst.resources import ResourcePath
 
 from linccf_dash.config import PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
@@ -13,9 +16,6 @@ from linccf_dash.utils.readers import DimensionParquetReader
 
 
 def run_import(cfg: PipelineConfig, catalog_filter: Optional[list[str]] = None) -> None:
-    from hats_import import pipeline_with_client
-    from hats_import.catalog.arguments import ImportArguments
-
     raw_dir = cfg.run.raw_dir
     hats_dir = cfg.run.hats_dir
     hats_dir.mkdir(parents=True, exist_ok=True)
@@ -46,8 +46,6 @@ def _download_schema(
     dimension_columns: list[str],
 ) -> Path:
     """Download and cache the schema for catalogs that need consistent column ordering."""
-    from lsst.resources import ResourcePath
-
     paths_file = raw_dir / "paths" / f"{catalog_name}.txt"
     first_path = paths_file.read_text(encoding="utf8").splitlines()[0].strip()
 

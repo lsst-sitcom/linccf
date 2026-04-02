@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import socket
+import subprocess
 import time
 from pathlib import Path
 from typing import Optional
@@ -7,6 +10,14 @@ from typing import Optional
 import typer
 
 from linccf_dash.config import PipelineConfig, load_config
+from linccf_dash.stages.butler import run_butler
+from linccf_dash.stages.collections import run_collections
+from linccf_dash.stages.crossmatch import run_crossmatch
+from linccf_dash.stages.generate_json import run_generate_json
+from linccf_dash.stages.import_catalogs import run_import
+from linccf_dash.stages.nesting import run_nesting
+from linccf_dash.stages.postprocess import run_postprocess
+from linccf_dash.stages.raw_sizes import run_raw_sizes
 
 app = typer.Typer(help="DASH Import Pipeline — convert Rubin DRP outputs to HATS catalogs.")
 
@@ -68,30 +79,21 @@ def _resolve_stages(
 
 
 def _run_stage(stage: str, cfg: PipelineConfig, catalog_filter: Optional[list[str]]) -> None:
-    # Import lazily so unused stages don't require all dependencies
     if stage == "butler":
-        from linccf_dash.stages.butler import run_butler
         run_butler(cfg, catalog_filter)
     elif stage == "raw_sizes":
-        from linccf_dash.stages.raw_sizes import run_raw_sizes
         run_raw_sizes(cfg, catalog_filter)
     elif stage == "import":
-        from linccf_dash.stages.import_catalogs import run_import
         run_import(cfg, catalog_filter)
     elif stage == "postprocess":
-        from linccf_dash.stages.postprocess import run_postprocess
         run_postprocess(cfg, catalog_filter)
     elif stage == "nesting":
-        from linccf_dash.stages.nesting import run_nesting
         run_nesting(cfg)
     elif stage == "collections":
-        from linccf_dash.stages.collections import run_collections
         run_collections(cfg)
     elif stage == "crossmatch":
-        from linccf_dash.stages.crossmatch import run_crossmatch
         run_crossmatch(cfg)
     elif stage == "generate_json":
-        from linccf_dash.stages.generate_json import run_generate_json
         run_generate_json(cfg)
 
 
@@ -117,11 +119,12 @@ def run(
 
     catalog_filter = [c.strip() for c in catalogs.split(",")] if catalogs else None
 
+    active_catalogs = list(cfg.enabled_catalogs(catalog_filter).keys())
+
     typer.echo(f"----- DASH Import Pipeline -----")
     typer.echo(f"Version : {cfg.run.version}")
     typer.echo(f"Stages  : {', '.join(stages_to_run)}")
-    if catalog_filter:
-        typer.echo(f"Catalogs: {', '.join(catalog_filter)}")
+    typer.echo(f"Catalogs: {', '.join(active_catalogs)}")
     typer.echo("")
 
     total_start = time.perf_counter()
@@ -138,3 +141,53 @@ def run(
     h, rem = divmod(int(total), 3600)
     m, s = divmod(rem, 60)
     typer.echo(f"Pipeline complete. Total time: {h:02d}:{m:02d}:{s:02d}")
+
+
+@app.command()
+def notebook(
+    port: int = typer.Option(8769, "--port", "-p", help="Port for the Jupyter notebook server."),
+    login_node: str = typer.Option(
+        "sdflogin003.slac.stanford.edu",
+        "--login-node",
+        help="SLAC login node hostname for the SSH tunnel.",
+    ),
+) -> None:
+    """Start a Jupyter notebook server and print the SSH tunnel command to reach it."""
+    user = os.environ.get("USER") or os.environ.get("LOGNAME") or "unknown"
+    local_host = socket.gethostname().split(".")[0]
+    jump_host = _detect_ssh_client_host()
+
+    typer.echo("\nTo connect from your laptop, run:\n")
+    if jump_host:
+        typer.echo(
+            f"  ssh -J {user}@{login_node},{user}@{jump_host} \\\n"
+            f"      -L {port}:localhost:{port} \\\n"
+            f"      {user}@{local_host}\n"
+        )
+    else:
+        typer.echo(
+            f"  ssh -J {user}@{login_node} \\\n"
+            f"      -L {port}:localhost:{port} \\\n"
+            f"      {user}@{local_host}\n"
+        )
+        typer.echo(
+            "  (Could not detect intermediate jump host — SSH_CLIENT not set. "
+            "Add the iana machine manually if needed.)\n"
+        )
+
+    typer.echo("Starting Jupyter...\n")
+    subprocess.run(["jupyter", "notebook", "--no-browser", f"--port={port}"])
+
+
+def _detect_ssh_client_host() -> Optional[str]:
+    """Return the short hostname of the machine that SSH'd into this one, if detectable."""
+    ssh_client = os.environ.get("SSH_CLIENT", "")
+    if not ssh_client:
+        return None
+    client_ip = ssh_client.split()[0]
+    try:
+        fqdn = socket.gethostbyaddr(client_ip)[0]
+        return fqdn.split(".")[0]
+    except (socket.herror, OSError):
+        # Fall back to the raw IP if reverse DNS fails
+        return client_ip

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import shutil
 
+from hats_import import pipeline_with_client
+from hats_import.collection.arguments import CollectionArguments
+
 from linccf_dash.config import PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
 
 
 def run_collections(cfg: PipelineConfig) -> None:
-    from hats_import import pipeline_with_client
-    from hats_import.collection.arguments import CollectionArguments
-
     hats_dir = cfg.run.hats_dir
 
     with dask_client(n_workers=16, threads_per_worker=1) as client:
