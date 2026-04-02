@@ -136,6 +136,46 @@ def _preflight_checks(
         raise typer.Exit(1)
 
 
+def _constrain_to_catalogs(
+    cfg: PipelineConfig,
+    catalog_names: list[str],
+) -> tuple[list[str], list[str]]:
+    """Prune nestings and collections whose required catalogs are not all active.
+
+    Skipped for any filter that was explicitly set by the user — only applies to
+    filters that were inferred from config (i.e. still None at call time).
+    Returns explicit lists (possibly empty) for nesting and collection filters,
+    and prints warnings for anything that gets dropped.
+    """
+    catalog_set = set(catalog_names)
+    feasible_nestings = []
+    for name, nested_cfg in cfg.enabled_nestings(None).items():
+        required = set([nested_cfg.object_catalog] + nested_cfg.source_catalogs)
+        missing = required - catalog_set
+        if missing:
+            typer.echo(
+                f"Warning: skipping nesting '{name}' — required catalog(s) not active: "
+                f"{', '.join(sorted(missing))}",
+                err=True,
+            )
+        else:
+            feasible_nestings.append(name)
+
+    feasible_nesting_set = set(feasible_nestings)
+    feasible_collections = []
+    for name, coll_cfg in cfg.enabled_collections(None).items():
+        nested_name = coll_cfg.nested_catalog
+        if nested_name not in feasible_nesting_set:
+            typer.echo(
+                f"Warning: skipping collection '{name}' — nested catalog '{nested_name}' is not being built",
+                err=True,
+            )
+        else:
+            feasible_collections.append(name)
+
+    return feasible_nestings, feasible_collections
+
+
 def _run_stage(
     stage: str,
     cfg: PipelineConfig,
@@ -192,11 +232,16 @@ def run(
     collection_filter = [c.strip() for c in collections.split(",")] if collections else None
 
     active_catalogs = list(cfg.enabled_catalogs(catalog_filter).keys())
+    if nesting_filter is None and collection_filter is None:
+        nesting_filter, collection_filter = _constrain_to_catalogs(
+            cfg, active_catalogs
+        )
     active_nestings = list(cfg.enabled_nestings(nesting_filter).keys())
     active_collections = list(cfg.enabled_collections(collection_filter).keys())
 
     typer.echo(f"----- DASH Import Pipeline -----")
     typer.echo(f"Version    : {cfg.run.version}")
+    typer.echo(f"Full Collection: {cfg.run.butler_collection}")
     typer.echo(f"Stages     : {', '.join(stages_to_run)}")
     typer.echo(f"Catalogs   : {', '.join(active_catalogs)}")
     typer.echo(f"Nestings   : {', '.join(active_nestings)}")

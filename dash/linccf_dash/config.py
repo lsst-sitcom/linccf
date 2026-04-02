@@ -27,7 +27,7 @@ class RunConfig(BaseModel):
     visit_table_name: str = "visit_table"
 
     @property
-    def butler_collections(self) -> str:
+    def butler_collection(self) -> str:
         if self.run:
             return f"{self.instrument}/runs/DRP/{self.run}/{self.version}/{self.collection}"
         return f"{self.instrument}/runs/DRP/{self.version}/{self.collection}"

@@ -18,7 +18,7 @@ def run_butler(cfg: PipelineConfig, catalog_filter: Optional[list[str]] = None) 
     for subdir in ("paths", "refs", "sizes"):
         (raw_dir / subdir).mkdir(parents=True, exist_ok=True)
 
-    butler = dafButler.Butler(cfg.run.repo, collections=cfg.run.butler_collections)
+    butler = dafButler.Butler(cfg.run.repo, collections=cfg.run.butler_collection)
 
     for catalog_name in cfg.enabled_catalogs(catalog_filter):
         _get_uris_from_butler(butler, catalog_name, raw_dir)
