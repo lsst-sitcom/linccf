@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import shutil
 
+from typing import Optional
+
 from hats_import import pipeline_with_client
 from hats_import.collection.arguments import CollectionArguments
 
@@ -9,11 +11,11 @@ from linccf_dash.config import PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
 
 
-def run_collections(cfg: PipelineConfig) -> None:
+def run_collections(cfg: PipelineConfig, collection_filter: Optional[list[str]] = None) -> None:
     hats_dir = cfg.run.hats_dir
 
     with dask_client(n_workers=16, threads_per_worker=1) as client:
-        for collection_name, collection_cfg in cfg.collections.items():
+        for collection_name, collection_cfg in cfg.enabled_collections(collection_filter).items():
             nested_name = collection_cfg.nested_catalog
             collection_dir = hats_dir / collection_name
             nested_dest = collection_dir / nested_name

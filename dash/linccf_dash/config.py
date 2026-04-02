@@ -134,6 +134,58 @@ class CollectionConfig(BaseModel):
     index_column: str
 
 
+class NestedConfigs(BaseModel):
+    """Holds the enabled list and per-nested-catalog config tables.
+
+    TOML shape:
+        [nested]
+        enabled = ["object_lc"]   # optional — omit to run all
+
+        [nested.object_lc]
+        object_catalog = "object"
+        ...
+    """
+    enabled: Optional[list[str]] = None
+    configs: dict[str, NestedConfig] = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _split_enabled_and_configs(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        configs = {k: v for k, v in data.items() if k != "enabled" and isinstance(v, dict)}
+        result: dict[str, Any] = {"configs": configs}
+        if "enabled" in data:
+            result["enabled"] = data["enabled"]
+        return result
+
+
+class CollectionsConfig(BaseModel):
+    """Holds the enabled list and per-collection config tables.
+
+    TOML shape:
+        [collections]
+        enabled = ["object_collection"]   # optional — omit to run all
+
+        [collections.object_collection]
+        nested_catalog = "object_lc"
+        ...
+    """
+    enabled: Optional[list[str]] = None
+    configs: dict[str, CollectionConfig] = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _split_enabled_and_configs(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        configs = {k: v for k, v in data.items() if k != "enabled" and isinstance(v, dict)}
+        result: dict[str, Any] = {"configs": configs}
+        if "enabled" in data:
+            result["enabled"] = data["enabled"]
+        return result
+
+
 class CrossmatchSurveyConfig(BaseModel):
     path: str
     radius_arcsec: float = 0.2
@@ -152,8 +204,8 @@ class PipelineConfig(BaseModel):
     run: RunConfig
     stages: StagesConfig = StagesConfig()
     catalogs: CatalogsConfig = CatalogsConfig()
-    nested: dict[str, NestedConfig] = {}
-    collections: dict[str, CollectionConfig] = {}
+    nested: NestedConfigs = NestedConfigs()
+    collections: CollectionsConfig = CollectionsConfig()
     crossmatch: CrossmatchConfig = CrossmatchConfig()
 
     def enabled_catalogs(self, filter: Optional[list[str]] = None) -> dict[str, CatalogConfig]:
@@ -167,6 +219,20 @@ class PipelineConfig(BaseModel):
                 raise ValueError(f"Catalog '{name}' is listed in catalogs.enabled but has no config section")
             result[name] = self.catalogs.configs[name]
         return result
+
+    def enabled_nestings(self, filter: Optional[list[str]] = None) -> dict[str, NestedConfig]:
+        """Return configs for enabled nested catalogs, optionally filtered to a subset by name."""
+        names = self.nested.enabled if self.nested.enabled is not None else list(self.nested.configs.keys())
+        if filter is not None:
+            names = [n for n in names if n in filter]
+        return {n: self.nested.configs[n] for n in names if n in self.nested.configs}
+
+    def enabled_collections(self, filter: Optional[list[str]] = None) -> dict[str, CollectionConfig]:
+        """Return configs for enabled collections, optionally filtered to a subset by name."""
+        names = self.collections.enabled if self.collections.enabled is not None else list(self.collections.configs.keys())
+        if filter is not None:
+            names = [n for n in names if n in filter]
+        return {n: self.collections.configs[n] for n in names if n in self.collections.configs}
 
 
 def _deep_merge(base: dict, override: dict) -> dict:

@@ -78,7 +78,71 @@ def _resolve_stages(
     return [s for s in STAGE_ORDER if s in requested]
 
 
-def _run_stage(stage: str, cfg: PipelineConfig, catalog_filter: Optional[list[str]]) -> None:
+def _preflight_checks(
+    stages_to_run: list[str],
+    cfg: PipelineConfig,
+    nesting_filter: Optional[list[str]],
+    collection_filter: Optional[list[str]],
+) -> None:
+    """Check that each stage's required inputs are either produced earlier in this run
+    or already exist on disk. Collected and reported together before anything runs."""
+    hats_dir = cfg.run.hats_dir
+    errors: list[str] = []
+
+    active_nestings = cfg.enabled_nestings(nesting_filter)
+    active_collections = cfg.enabled_collections(collection_filter)
+
+    if "nesting" in stages_to_run:
+        for nested_name, nested_cfg in active_nestings.items():
+            for cat_name in [nested_cfg.object_catalog] + nested_cfg.source_catalogs:
+                if cat_name not in cfg.catalogs.enabled and not (hats_dir / cat_name).exists():
+                    errors.append(
+                        f"nesting '{nested_name}' needs catalog '{cat_name}' but it is not "
+                        f"in catalogs.enabled and {hats_dir / cat_name} does not exist."
+                    )
+
+    if "collections" in stages_to_run:
+        for collection_name, collection_cfg in active_collections.items():
+            nested_name = collection_cfg.nested_catalog
+            produced = "nesting" in stages_to_run and nested_name in active_nestings
+            if not produced and not (hats_dir / nested_name).exists():
+                errors.append(
+                    f"collections '{collection_name}' needs nested catalog '{nested_name}' but "
+                    f"nesting is not running and {hats_dir / nested_name} does not exist."
+                )
+
+    if "crossmatch" in stages_to_run:
+        for collection_name in active_collections:
+            produced = "collections" in stages_to_run
+            if not produced and not (hats_dir / collection_name).exists():
+                errors.append(
+                    f"crossmatch needs collection '{collection_name}' but collections stage "
+                    f"is not running and {hats_dir / collection_name} does not exist."
+                )
+
+    if "generate_json" in stages_to_run:
+        for collection_name in active_collections:
+            produced = "collections" in stages_to_run
+            if not produced and not (hats_dir / collection_name).exists():
+                errors.append(
+                    f"generate_json needs collection '{collection_name}' but collections stage "
+                    f"is not running and {hats_dir / collection_name} does not exist."
+                )
+
+    if errors:
+        typer.echo("Preflight checks failed:", err=True)
+        for error in errors:
+            typer.echo(f"  - {error}", err=True)
+        raise typer.Exit(1)
+
+
+def _run_stage(
+    stage: str,
+    cfg: PipelineConfig,
+    catalog_filter: Optional[list[str]],
+    nesting_filter: Optional[list[str]],
+    collection_filter: Optional[list[str]],
+) -> None:
     if stage == "butler":
         run_butler(cfg, catalog_filter)
     elif stage == "raw_sizes":
@@ -88,13 +152,13 @@ def _run_stage(stage: str, cfg: PipelineConfig, catalog_filter: Optional[list[st
     elif stage == "postprocess":
         run_postprocess(cfg, catalog_filter)
     elif stage == "nesting":
-        run_nesting(cfg)
+        run_nesting(cfg, nesting_filter)
     elif stage == "collections":
-        run_collections(cfg)
+        run_collections(cfg, collection_filter)
     elif stage == "crossmatch":
-        run_crossmatch(cfg)
+        run_crossmatch(cfg, collection_filter)
     elif stage == "generate_json":
-        run_generate_json(cfg)
+        run_generate_json(cfg, collection_filter)
 
 
 @app.command()
@@ -109,6 +173,12 @@ def run(
     catalogs: Optional[str] = typer.Option(
         None, "--catalogs", help="Comma-separated catalog names to process (e.g. dia_object,object)."
     ),
+    nestings: Optional[str] = typer.Option(
+        None, "--nestings", help="Comma-separated nested catalog names to build (e.g. object_lc,dia_object_lc)."
+    ),
+    collections: Optional[str] = typer.Option(
+        None, "--collections", help="Comma-separated collection names to build (e.g. object_collection)."
+    ),
 ) -> None:
     """Run the DASH pipeline."""
     cfg = load_config(config_paths)
@@ -118,20 +188,28 @@ def run(
         _check_lsst()
 
     catalog_filter = [c.strip() for c in catalogs.split(",")] if catalogs else None
+    nesting_filter = [n.strip() for n in nestings.split(",")] if nestings else None
+    collection_filter = [c.strip() for c in collections.split(",")] if collections else None
 
     active_catalogs = list(cfg.enabled_catalogs(catalog_filter).keys())
+    active_nestings = list(cfg.enabled_nestings(nesting_filter).keys())
+    active_collections = list(cfg.enabled_collections(collection_filter).keys())
 
     typer.echo(f"----- DASH Import Pipeline -----")
-    typer.echo(f"Version : {cfg.run.version}")
-    typer.echo(f"Stages  : {', '.join(stages_to_run)}")
-    typer.echo(f"Catalogs: {', '.join(active_catalogs)}")
+    typer.echo(f"Version    : {cfg.run.version}")
+    typer.echo(f"Stages     : {', '.join(stages_to_run)}")
+    typer.echo(f"Catalogs   : {', '.join(active_catalogs)}")
+    typer.echo(f"Nestings   : {', '.join(active_nestings)}")
+    typer.echo(f"Collections: {', '.join(active_collections)}")
     typer.echo("")
+
+    _preflight_checks(stages_to_run, cfg, nesting_filter, collection_filter)
 
     total_start = time.perf_counter()
     for stage in stages_to_run:
         stage_start = time.perf_counter()
         typer.echo(f"[{stage}] starting...")
-        _run_stage(stage, cfg, catalog_filter)
+        _run_stage(stage, cfg, catalog_filter, nesting_filter, collection_filter)
         elapsed = time.perf_counter() - stage_start
         h, rem = divmod(int(elapsed), 3600)
         m, s = divmod(rem, 60)

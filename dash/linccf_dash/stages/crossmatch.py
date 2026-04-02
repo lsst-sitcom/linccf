@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 import lsdb
 from upath import UPath
 
@@ -7,14 +9,14 @@ from linccf_dash.config import CrossmatchSurveyConfig, PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
 
 
-def run_crossmatch(cfg: PipelineConfig) -> None:
+def run_crossmatch(cfg: PipelineConfig, collection_filter: Optional[list[str]] = None) -> None:
     from lsdb.io.to_association import to_association
 
     hats_dir = cfg.run.hats_dir
 
     with dask_client(n_workers=8, threads_per_worker=1, memory_limit="128GB") as client:  # noqa: F841
         collections = [
-            lsdb.open_catalog(hats_dir / name) for name in cfg.collections
+            lsdb.open_catalog(hats_dir / name) for name in cfg.enabled_collections(collection_filter)
         ]
 
         for survey_name, survey_cfg in cfg.crossmatch.surveys.items():

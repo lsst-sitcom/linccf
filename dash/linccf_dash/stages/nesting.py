@@ -9,15 +9,17 @@ from hats_import import pipeline_with_client
 from hats_import.catalog import ImportArguments
 from hats_import.margin_cache.margin_cache_arguments import MarginCacheArguments
 
+from typing import Optional
+
 from linccf_dash.config import NestedConfig, PipelineConfig
 from linccf_dash.utils.dask_client import dask_client
 
 
-def run_nesting(cfg: PipelineConfig) -> None:
+def run_nesting(cfg: PipelineConfig, nesting_filter: Optional[list[str]] = None) -> None:
     hats_dir = cfg.run.hats_dir
 
     with dask_client(n_workers=8, threads_per_worker=1, memory_limit="32GB") as client:
-        for nested_name, nested_cfg in cfg.nested.items():
+        for nested_name, nested_cfg in cfg.enabled_nestings(nesting_filter).items():
             _build_nested_catalog(
                 nested_name=nested_name,
                 nested_cfg=nested_cfg,

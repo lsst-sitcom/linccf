@@ -2,19 +2,20 @@ from __future__ import annotations
 
 import json
 import subprocess
+from typing import Optional
 
 import lsdb
 
 from linccf_dash.config import PipelineConfig
 
 
-def run_generate_json(cfg: PipelineConfig) -> None:
+def run_generate_json(cfg: PipelineConfig, collection_filter: Optional[list[str]] = None) -> None:
     hats_dir = cfg.run.hats_dir
     run_cfg = cfg.run
 
     collections_json = [
         _generate_collection_json(collection_name, hats_dir, run_cfg)
-        for collection_name in cfg.collections
+        for collection_name in cfg.enabled_collections(collection_filter)
     ]
 
     out_path = hats_dir.parent / f"{run_cfg.version}.json"
